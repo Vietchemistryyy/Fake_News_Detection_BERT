@@ -1,147 +1,101 @@
 # ============================================================================
-# Fake News Detection - Python Dependencies (Stable Cross-Platform Edition)
+# Fake News Detection - Python Dependencies
+# Compatible with Colab, Python 3.12, BERT/Transformers finetuning
 # ============================================================================
 
+# -----------------------------
 # Core Data Science
+# -----------------------------
 pandas>=2.2.2
-numpy>=1.26.0
+numpy==2.2.2           # fix cho Colab & TF compatibility
 scikit-learn>=1.5.0
 
+# -----------------------------
 # Deep Learning & NLP
-torch>=2.1.0
-transformers>=4.35.0
-datasets>=2.14.5
-evaluate>=0.4.1
+# -----------------------------
+torch==2.3.1           # fix version stable với HF Trainer
+torchvision==0.18.1
+torchaudio==2.3.1
+transformers==4.39.3
+datasets==2.21.0
+evaluate==0.4.2
 tokenizers>=0.15.2
+accelerate==0.29.3     # HF Trainer multi-GPU / TPU
 
+# -----------------------------
 # Visualization
+# -----------------------------
 matplotlib>=3.8.0
 seaborn>=0.13.0
 wordcloud>=1.9.2
 plotly>=5.17.0
 
+# -----------------------------
 # Text Processing
+# -----------------------------
 nltk>=3.8.1
 spacy>=3.7.0
 textblob>=0.17.1
 
+# -----------------------------
 # Progress Bars & Utilities
+# -----------------------------
 tqdm>=4.66.1
 python-dotenv>=1.0.0
 rich>=13.6.0
 
+# -----------------------------
 # Jupyter & Notebook
+# -----------------------------
 jupyter>=1.0.0
-ipykernel>=6.25.2
+ipykernel==6.25.2
 ipywidgets>=8.1.1
 
+# -----------------------------
 # API Framework (Phase 3)
+# -----------------------------
 fastapi>=0.104.1
 uvicorn[standard]>=0.24.0
 pydantic>=2.4.2
 python-multipart>=0.0.6
 
+# -----------------------------
 # Web Scraping (for URL feature)
+# -----------------------------
 beautifulsoup4>=4.12.2
 newspaper3k>=0.2.8
 requests>=2.31.0
 lxml>=5.2.0
+pyarrow==16.0.0       # sync với cuDF / HF datasets
 
+# -----------------------------
 # Database
+# -----------------------------
 pymongo>=4.5.0
 motor>=3.3.1
 
+# -----------------------------
 # Testing
+# -----------------------------
 pytest>=7.4.3
 pytest-cov>=4.1.0
 pytest-asyncio>=0.21.1
 
+# -----------------------------
 # Code Quality & Format
+# -----------------------------
 black>=23.10.1
 flake8>=6.1.0
 mypy>=1.6.1
 isort>=5.12.0
 
+# -----------------------------
 # Logging & Monitoring
+# -----------------------------
 loguru>=0.7.2
 
+# -----------------------------
 # Miscellaneous
+# -----------------------------
 python-dateutil>=2.8.2
 pytz>=2023.3
-
-
-# Backup requirements 
-# ============================================================================
-# Fake News Detection - Python Dependencies (Stable Cursor Edition for Python 3.12.7)
-# ============================================================================
-
-# Core Data Science
-# pandas>=2.2.2
-# numpy>=1.26.0
-# scikit-learn>=1.5.0
-
-# # Deep Learning & NLP
-# torch==2.3.1
-# torchvision==0.18.1
-# torchaudio==2.3.1
-# transformers==4.39.3
-# datasets==2.21.0
-# evaluate==0.4.2
-# tokenizers==0.15.2
-
-# # Visualization
-# matplotlib>=3.8.0
-# seaborn>=0.13.0
-# wordcloud>=1.9.2
-# plotly>=5.17.0
-
-# # Text Processing
-# nltk>=3.8.1
-# spacy>=3.7.0
-# textblob>=0.17.1
-
-# # Progress Bars & Utilities
-# tqdm>=4.66.1
-# python-dotenv>=1.0.0
-# rich>=13.6.0
-
-# # Jupyter & Notebook
-# jupyter>=1.0.0
-# ipykernel>=6.25.2
-# ipywidgets>=8.1.1
-
-# # API Framework (Phase 3)
-# fastapi>=0.104.1
-# uvicorn[standard]>=0.24.0
-# pydantic>=2.4.2
-# python-multipart>=0.0.6
-
-# # Web Scraping (for URL feature)
-# beautifulsoup4>=4.12.2
-# newspaper3k>=0.2.8
-# requests>=2.31.0
-# lxml>=5.2.0
-
-# # Database
-# pymongo>=4.5.0
-# motor>=3.3.1
-
-# # Testing
-# pytest>=7.4.3
-# pytest-cov>=4.1.0
-# pytest-asyncio>=0.21.1
-
-# # Code Quality & Format
-# black>=23.10.1
-# flake8>=6.1.0
-# mypy>=1.6.1
-# isort>=5.12.0
-
-# # Logging & Monitoring
-# loguru>=0.7.2
-
-# # Miscellaneous
-# python-dateutil>=2.8.2
-# pytz>=2023.3
-# pyarrow==16.0.0
-# accelerate==0.29.3
