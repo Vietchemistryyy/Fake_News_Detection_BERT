@@ -1,0 +1,35 @@
+{
+    "preprocessing_date": "2025-10-20T20:05:10.064506",
+    "total_records": 136063,
+    "splits": {
+        "train": {
+            "count": 95244,
+            "percentage": 69.99992650463388,
+            "fake_percentage": 46.90059216328588
+        },
+        "val": {
+            "count": 20409,
+            "percentage": 14.999669270852472,
+            "fake_percentage": 46.90087706404037
+        },
+        "test": {
+            "count": 20410,
+            "percentage": 15.000404224513645,
+            "fake_percentage": 46.90347868691818
+        }
+    },
+    "text_statistics": {
+        "avg_original_length": 2592.730040737474,
+        "avg_cleaned_length": 2573.4557137457477,
+        "avg_original_words": 424.62256940069716,
+        "avg_cleaned_words": 424.376958128596,
+        "length_reduction": 0.743398915000193
+    },
+    "preprocessing_config": {
+        "remove_urls": true,
+        "remove_mentions": true,
+        "remove_hashtags": true,
+        "lowercase": true,
+        "random_seed": 42
+    }
+}

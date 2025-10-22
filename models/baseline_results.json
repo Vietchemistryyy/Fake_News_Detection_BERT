@@ -1,0 +1,26 @@
+{
+    "model": "TF-IDF + Logistic Regression",
+    "vectorizer_config": {
+        "max_features": 10000,
+        "min_df": 5,
+        "max_df": 0.8,
+        "ngram_range": [
+            1,
+            2
+        ]
+    },
+    "validation_metrics": {
+        "accuracy": 0.888235582341124,
+        "precision": 0.8708922576050463,
+        "recall": 0.8942749686585876,
+        "f1_score": 0.8824287407865574
+    },
+    "test_metrics": {
+        "accuracy": 0.8897599216070554,
+        "precision": 0.8743482261527451,
+        "recall": 0.8933458685887392,
+        "f1_score": 0.8837449622816989
+    },
+    "vocabulary_size": 10000,
+    "training_samples": 95244
+}
