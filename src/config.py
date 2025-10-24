@@ -93,12 +93,12 @@ class ModelConfig:
     TRUNCATION = True
 
     # Training parameters
-    BATCH_SIZE = 16  # Reduce if OOM error, increase if you have more GPU memory
-    LEARNING_RATE = 2e-5  # Standard for BERT fine-tuning
-    NUM_EPOCHS = 3  # Usually 3-5 epochs is sufficient
+    BATCH_SIZE = 32  # Reduce if OOM error, increase if you have more GPU memory
+    LEARNING_RATE = 1.5e-05  # Standard for BERT fine-tuning
+    NUM_EPOCHS = 2  # Usually 3-5 epochs is sufficient
     WARMUP_STEPS = 500
     WEIGHT_DECAY = 0.01
-
+    
     # Optimizer
     OPTIMIZER = "adamw"
     EPSILON = 1e-8
