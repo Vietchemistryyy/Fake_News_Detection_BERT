@@ -138,7 +138,13 @@ def load_data_loaders(tokenizer_name: str = ModelConfig.MODEL_NAME,
     # Load tokenizer
     logger.info(f"Loading tokenizer: {tokenizer_name}")
     # tokenizer = AutoTokenizer.from_pretrained(tokenizer_name) #old
-    tokenizer = AutoTokenizer.from_pretrained(tokenizer_name, revision='main') #new
+    # new tokenizer
+    tokenizer = AutoTokenizer.from_pretrained(
+    tokenizer_name, 
+    revision='main', 
+    use_fast=True,
+    trust_remote_code=False # Thêm cờ an toàn này nếu cần
+)
     
     # Set default paths
     if train_path is None:
