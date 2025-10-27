@@ -84,7 +84,7 @@ class ModelConfig:
     """Model architecture and training configuration"""
 
     # Model selection
-    MODEL_NAME = "distilbert-base-uncased"  # Options: bert-base-uncased, roberta-base
+    MODEL_NAME = "roberta-base"  # Options: bert-base-uncased, roberta-base
     NUM_LABELS = 2  # Binary classification (Real=0, Fake=1)
 
     # Tokenization
@@ -94,7 +94,7 @@ class ModelConfig:
 
     # Training parameters
     BATCH_SIZE = 32  # Reduce if OOM error, increase if you have more GPU memory
-    LEARNING_RATE = 1.5e-05  # Standard for BERT fine-tuning
+    LEARNING_RATE = 2e-05  # Standard for BERT fine-tuning
     NUM_EPOCHS = 2  # Usually 3-5 epochs is sufficient
     WARMUP_STEPS = 500
     WEIGHT_DECAY = 0.01
