@@ -95,7 +95,7 @@ class ModelConfig:
     # Training parameters
     BATCH_SIZE = 32  # Reduce if OOM error, increase if you have more GPU memory
     LEARNING_RATE = 2e-05  # Standard for BERT fine-tuning
-    NUM_EPOCHS = 2  # Usually 3-5 epochs is sufficient
+    NUM_EPOCHS = 3  # Usually 3-5 epochs is sufficient
     WARMUP_STEPS = 500
     WEIGHT_DECAY = 0.01
     
