@@ -16,7 +16,7 @@ try:
 except ImportError as e:
     print(f"Warning: Transformers not available: {e}")
     print("Only baseline model training will be available.")
-    TRANSFORMERS_AVAILABLE = False
+    TRANSFORMERS_AVAILABLE = False # Check Transformers availability
 
 try:
     from .config import ModelConfig, DataConfig

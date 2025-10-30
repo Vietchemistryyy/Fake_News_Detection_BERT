@@ -67,27 +67,27 @@ def save_json(data: Dict, filepath: Path):
     """Save dictionary to JSON file"""
     with open(filepath, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
-    print(f"✅ Saved JSON to: {filepath}")
+    print(f"Saved JSON to: {filepath}")
 
 
 def load_json(filepath: Path) -> Dict:
     """Load JSON file to dictionary"""
     with open(filepath, 'r', encoding='utf-8') as f:
         data = json.load(f)
-    print(f"✅ Loaded JSON from: {filepath}")
+    print(f"Loaded JSON from: {filepath}")
     return data
 
 
 def save_csv(df: pd.DataFrame, filepath: Path):
     """Save DataFrame to CSV"""
     df.to_csv(filepath, index=False)
-    print(f"✅ Saved CSV to: {filepath}")
+    print(f"Saved CSV to: {filepath}")
 
 
 def load_csv(filepath: Path) -> pd.DataFrame:
     """Load CSV to DataFrame"""
     df = pd.read_csv(filepath)
-    print(f"✅ Loaded CSV from: {filepath}")
+    print(f"Loaded CSV from: {filepath}")
     return df
 
 
@@ -147,12 +147,12 @@ def print_statistics(stats: Dict):
     print("\n" + "=" * 80)
     print("DATASET STATISTICS")
     print("=" * 80)
-    print(f"\n📊 Total Records: {stats['total_records']:,}")
-    print(f"\n🏷️  Label Distribution:")
+    print(f"\nTotal Records: {stats['total_records']:,}")
+    print(f"\nLabel Distribution:")
     print(f"   - Real News (0): {stats['real_count']:,} ({100 - stats['fake_percentage']:.2f}%)")
     print(f"   - Fake News (1): {stats['fake_count']:,} ({stats['fake_percentage']:.2f}%)")
     print(f"   - Imbalance Ratio: {stats['imbalance_ratio']:.3f}")
-    print(f"\n📝 Text Statistics:")
+    print(f"\nText Statistics:")
     print(f"   - Avg Length: {stats['avg_text_length']:.1f} characters")
     print(f"   - Median Length: {stats['median_text_length']:.1f} characters")
     print(f"   - Range: {stats['min_text_length']} - {stats['max_text_length']} characters")
@@ -270,12 +270,12 @@ class Timer:
 
     def __enter__(self):
         self.start_time = datetime.now()
-        print(f"⏱️  {self.name} started...")
+        print(f"{self.name} started...")
         return self
 
     def __exit__(self, *args):
         elapsed = (datetime.now() - self.start_time).total_seconds()
-        print(f"✅ {self.name} completed in {elapsed:.2f} seconds")
+        print(f"{self.name} completed in {elapsed:.2f} seconds")
 
 
 # ============================================================================
@@ -308,7 +308,7 @@ def set_seed(seed: int = 42):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-    print(f"✅ Random seed set to: {seed}")
+    print(f"Random seed set to: {seed}")
 
 
 # ============================================================================
@@ -316,5 +316,5 @@ def set_seed(seed: int = 42):
 # ============================================================================
 
 if __name__ == "__main__":
-    print("Utility functions loaded successfully!")
+    print("Utility functions loaded successfully.")
     print(f"Available functions: {[func for func in dir() if not func.startswith('_')]}")

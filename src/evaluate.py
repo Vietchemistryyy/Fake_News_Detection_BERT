@@ -397,7 +397,7 @@ def create_evaluation_report(
         save_path = Path(save_dir) / "evaluation_report.json"
         save_evaluation_results(report, save_path)
     
-    logger.info("✅ Evaluation report created!")
+    logger.info(" Evaluation report created!")
     
     return report
 

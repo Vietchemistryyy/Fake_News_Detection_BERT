@@ -265,7 +265,7 @@ def create_directories():
     for directory in directories:
         directory.mkdir(parents=True, exist_ok=True)
 
-    print("✅ All directories created successfully!")
+    print("All directories created successfully.")
 
 
 def print_config():
@@ -273,17 +273,17 @@ def print_config():
     print("=" * 80)
     print("CONFIGURATION SUMMARY")
     print("=" * 80)
-    print(f"\n📁 Project Root: {ROOT_DIR}")
-    print(f"\n📊 Data Configuration:")
+    print(f"\nProject Root: {ROOT_DIR}")
+    print(f"\nData Configuration:")
     print(f"   - Raw Data: {DataConfig.RAW_DATA_PATH}")
     print(f"   - Train/Val/Test: {DataConfig.TRAIN_RATIO}/{DataConfig.VAL_RATIO}/{DataConfig.TEST_RATIO}")
-    print(f"\n🤖 Model Configuration:")
+    print(f"\nModel Configuration:")
     print(f"   - Model: {ModelConfig.MODEL_NAME}")
     print(f"   - Max Length: {ModelConfig.MAX_LENGTH}")
     print(f"   - Batch Size: {ModelConfig.BATCH_SIZE}")
     print(f"   - Learning Rate: {ModelConfig.LEARNING_RATE}")
     print(f"   - Epochs: {ModelConfig.NUM_EPOCHS}")
-    print(f"\n🎯 Training Configuration:")
+    print(f"\nTraining Configuration:")
     print(f"   - Device: {TrainingConfig.DEVICE}")
     print(f"   - FP16: {TrainingConfig.USE_FP16}")
     print(f"   - Seed: {TrainingConfig.SEED}")

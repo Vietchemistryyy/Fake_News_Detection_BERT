@@ -400,5 +400,5 @@ if __name__ == "__main__":
     print(f"  - Training:   {len(train_df):,} samples")
     print(f"  - Validation: {len(val_df):,} samples")
     print(f"  - Test:       {len(test_df):,} samples")
-    print("\n📌 Next step: Run notebooks/01_eda.ipynb for exploratory analysis")
+    print("\n Next step: Run notebooks/01_eda.ipynb for exploratory analysis")
     print("="*80)

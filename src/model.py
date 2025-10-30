@@ -246,7 +246,7 @@ class BertForSequenceClassification:
         
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
         
-        logger.info("✅ Model and tokenizer loaded successfully")
+        logger.info(" Model and tokenizer loaded successfully")
     
     def get_model(self):
         """

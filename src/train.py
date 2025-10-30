@@ -39,7 +39,7 @@ try:
             EarlyStoppingCallback = None
     
     TRANSFORMERS_AVAILABLE = True
-    print(f"✅ Transformers {transformers.__version__} loaded successfully")
+    print(f"Transformers {transformers.__version__} loaded successfully")
 except ImportError as e:
     print(f"Warning: Transformers not available: {e}")
     print("Only baseline model training will be available.")
