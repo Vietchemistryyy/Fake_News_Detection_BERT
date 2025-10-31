@@ -12,7 +12,7 @@ from pathlib import Path
 
 # Root directory
 ROOT_DIR = Path(__file__).parent.parent
-PROJECT_NAME = "Fake_News_Detection"
+PROJECT_NAME = "Fake_News_Detection_BERT"
 
 # Data paths
 DATA_DIR = ROOT_DIR / "data"
@@ -77,24 +77,24 @@ class DataConfig:
 
 
 # ============================================================================
-# MODEL CONFIGURATION
+# MODEL CONFIGURATION - UPDATED FOR ROBERTA
 # ============================================================================
 
 class ModelConfig:
     """Model architecture and training configuration"""
 
-    # Model selection
-    MODEL_NAME = "roberta-base"  # Options: bert-base-uncased, roberta-base
+    # Model selection - CHANGED TO ROBERTA
+    MODEL_NAME = "roberta-base"  # Changed from distilbert-base-uncased
     NUM_LABELS = 2  # Binary classification (Real=0, Fake=1)
 
     # Tokenization
-    MAX_LENGTH = 256  # Maximum sequence length (256 for speed, 512 for accuracy)
+    MAX_LENGTH = 256  # RoBERTa can handle up to 512, using 256 for speed
     PADDING = "max_length"
     TRUNCATION = True
 
     # Training parameters
-    BATCH_SIZE = 32  # Reduce if OOM error, increase if you have more GPU memory
-    LEARNING_RATE = 2e-05  # Standard for BERT fine-tuning
+    BATCH_SIZE = 16  # Reduced for RoBERTa (larger model than DistilBERT)
+    LEARNING_RATE = 2e-05  # Standard for BERT/RoBERTa fine-tuning
     NUM_EPOCHS = 3  # Usually 3-5 epochs is sufficient
     WARMUP_STEPS = 500
     WEIGHT_DECAY = 0.01
@@ -140,7 +140,7 @@ class TrainingConfig:
     USE_FP16 = True
 
     # Gradient accumulation (simulate larger batch size)
-    GRADIENT_ACCUMULATION_STEPS = 1
+    GRADIENT_ACCUMULATION_STEPS = 2  # Increased for RoBERTa
 
     # Gradient clipping (prevent exploding gradients)
     MAX_GRAD_NORM = 1.0
@@ -154,7 +154,7 @@ class TrainingConfig:
     DETERMINISTIC = True
 
     # DataLoader
-    NUM_WORKERS = 4  # Number of workers for data loading
+    NUM_WORKERS = 2  # Reduced for Kaggle compatibility
     PIN_MEMORY = True  # Faster data transfer to GPU
 
 
@@ -196,7 +196,7 @@ class APIConfig:
     # API settings
     API_TITLE = "Fake News Detection API"
     API_VERSION = "1.0.0"
-    API_DESCRIPTION = "API for detecting fake news using BERT"
+    API_DESCRIPTION = "API for detecting fake news using RoBERTa"
 
     # Server
     HOST = "0.0.0.0"
@@ -265,7 +265,7 @@ def create_directories():
     for directory in directories:
         directory.mkdir(parents=True, exist_ok=True)
 
-    print("All directories created successfully.")
+    print("✅ All directories created successfully.")
 
 
 def print_config():
@@ -287,6 +287,7 @@ def print_config():
     print(f"   - Device: {TrainingConfig.DEVICE}")
     print(f"   - FP16: {TrainingConfig.USE_FP16}")
     print(f"   - Seed: {TrainingConfig.SEED}")
+    print(f"   - Gradient Accumulation: {TrainingConfig.GRADIENT_ACCUMULATION_STEPS}")
     print("=" * 80)
 
 
