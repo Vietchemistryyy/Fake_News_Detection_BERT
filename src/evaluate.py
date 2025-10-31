@@ -15,7 +15,8 @@ from sklearn.metrics import (
     confusion_matrix,
     classification_report,
     roc_curve,
-    precision_recall_curve
+    precision_recall_curve,
+    average_precision_score
 )
 import pandas as pd
 from typing import Dict, List, Any, Tuple, Optional
@@ -24,7 +25,7 @@ from pathlib import Path
 import json
 
 try:
-    from .config import VISUALIZATIONS_DIR, METRICS_DIR
+    from src.config import VISUALIZATIONS_DIR, METRICS_DIR
 except ImportError:
     # Fallback for when running the file directly
     import sys
@@ -54,9 +55,9 @@ def compute_metrics(eval_pred) -> Dict[str, float]:
     
     # Compute metrics
     accuracy = accuracy_score(labels, predictions)
-    precision = precision_score(labels, predictions, average='weighted')
-    recall = recall_score(labels, predictions, average='weighted')
-    f1 = f1_score(labels, predictions, average='weighted')
+    precision = precision_score(labels, predictions, average='weighted', zero_division=0)
+    recall = recall_score(labels, predictions, average='weighted', zero_division=0)
+    f1 = f1_score(labels, predictions, average='weighted', zero_division=0)
     
     return {
         'accuracy': accuracy,
@@ -64,6 +65,72 @@ def compute_metrics(eval_pred) -> Dict[str, float]:
         'recall': recall,
         'f1': f1
     }
+
+
+def compute_extended_metrics(
+    y_true: np.ndarray,
+    y_pred: np.ndarray,
+    y_proba: Optional[np.ndarray] = None
+) -> Dict[str, Any]:
+    """
+    Compute extended evaluation metrics including per-class metrics
+    
+    Args:
+        y_true: True labels
+        y_pred: Predicted labels
+        y_proba: Prediction probabilities (optional)
+        
+    Returns:
+        Dictionary containing extended metrics
+    """
+    # Basic metrics
+    accuracy = accuracy_score(y_true, y_pred)
+    precision = precision_score(y_true, y_pred, average='weighted', zero_division=0)
+    recall = recall_score(y_true, y_pred, average='weighted', zero_division=0)
+    f1 = f1_score(y_true, y_pred, average='weighted', zero_division=0)
+    
+    # Per-class metrics
+    precision_per_class = precision_score(y_true, y_pred, average=None, zero_division=0)
+    recall_per_class = recall_score(y_true, y_pred, average=None, zero_division=0)
+    f1_per_class = f1_score(y_true, y_pred, average=None, zero_division=0)
+    
+    # Confusion matrix
+    cm = confusion_matrix(y_true, y_pred)
+    
+    # Classification report
+    class_report = classification_report(y_true, y_pred, output_dict=True, zero_division=0)
+    
+    results = {
+        'accuracy': float(accuracy),
+        'precision': float(precision),
+        'recall': float(recall),
+        'f1': float(f1),
+        'precision_per_class': precision_per_class.tolist(),
+        'recall_per_class': recall_per_class.tolist(),
+        'f1_per_class': f1_per_class.tolist(),
+        'confusion_matrix': cm.tolist(),
+        'classification_report': class_report
+    }
+    
+    # Add ROC AUC and Average Precision if probabilities provided
+    if y_proba is not None:
+        try:
+            if y_proba.ndim == 2 and y_proba.shape[1] == 2:
+                # Binary classification with probabilities for both classes
+                roc_auc = roc_auc_score(y_true, y_proba[:, 1])
+                avg_precision = average_precision_score(y_true, y_proba[:, 1])
+                results['roc_auc'] = float(roc_auc)
+                results['average_precision'] = float(avg_precision)
+            else:
+                # Single probability array
+                roc_auc = roc_auc_score(y_true, y_proba)
+                avg_precision = average_precision_score(y_true, y_proba)
+                results['roc_auc'] = float(roc_auc)
+                results['average_precision'] = float(avg_precision)
+        except Exception as e:
+            logger.warning(f"Could not compute ROC AUC or Average Precision: {e}")
+    
+    return results
 
 
 def evaluate_model(
@@ -86,52 +153,15 @@ def evaluate_model(
     """
     logger.info(f"Evaluating {model_name}...")
     
-    # Basic metrics
-    accuracy = accuracy_score(y_true, y_pred)
-    precision = precision_score(y_true, y_pred, average='weighted')
-    recall = recall_score(y_true, y_pred, average='weighted')
-    f1 = f1_score(y_true, y_pred, average='weighted')
-    
-    # Per-class metrics
-    precision_per_class = precision_score(y_true, y_pred, average=None)
-    recall_per_class = recall_score(y_true, y_pred, average=None)
-    f1_per_class = f1_score(y_true, y_pred, average=None)
-    
-    # Confusion matrix
-    cm = confusion_matrix(y_true, y_pred)
-    
-    # Classification report
-    class_report = classification_report(y_true, y_pred, output_dict=True)
-    
-    results = {
-        'model_name': model_name,
-        'accuracy': accuracy,
-        'precision': precision,
-        'recall': recall,
-        'f1': f1,
-        'precision_per_class': precision_per_class.tolist(),
-        'recall_per_class': recall_per_class.tolist(),
-        'f1_per_class': f1_per_class.tolist(),
-        'confusion_matrix': cm.tolist(),
-        'classification_report': class_report
-    }
-    
-    # ROC AUC if probabilities provided
-    if y_proba is not None:
-        if y_proba.ndim == 2 and y_proba.shape[1] == 2:
-            # Binary classification with probabilities for both classes
-            roc_auc = roc_auc_score(y_true, y_proba[:, 1])
-            results['roc_auc'] = roc_auc
-        else:
-            # Single probability array
-            roc_auc = roc_auc_score(y_true, y_proba)
-            results['roc_auc'] = roc_auc
+    # Use compute_extended_metrics for comprehensive evaluation
+    results = compute_extended_metrics(y_true, y_pred, y_proba)
+    results['model_name'] = model_name
     
     logger.info(f"✅ {model_name} evaluation completed:")
-    logger.info(f"   Accuracy: {accuracy:.4f}")
-    logger.info(f"   Precision: {precision:.4f}")
-    logger.info(f"   Recall: {recall:.4f}")
-    logger.info(f"   F1-score: {f1:.4f}")
+    logger.info(f"   Accuracy: {results['accuracy']:.4f}")
+    logger.info(f"   Precision: {results['precision']:.4f}")
+    logger.info(f"   Recall: {results['recall']:.4f}")
+    logger.info(f"   F1-score: {results['f1']:.4f}")
     if 'roc_auc' in results:
         logger.info(f"   ROC AUC: {results['roc_auc']:.4f}")
     
@@ -177,6 +207,7 @@ def plot_confusion_matrix(
     plt.tight_layout()
     
     if save_path:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
         logger.info(f"Confusion matrix saved to: {save_path}")
     
@@ -222,6 +253,7 @@ def plot_roc_curve(
     plt.tight_layout()
     
     if save_path:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
         logger.info(f"ROC curve saved to: {save_path}")
     
@@ -249,20 +281,24 @@ def plot_precision_recall_curve(
         y_scores = y_proba
     
     precision, recall, _ = precision_recall_curve(y_true, y_scores)
+    avg_precision = average_precision_score(y_true, y_scores)
     
     plt.figure(figsize=(8, 6))
-    plt.plot(recall, precision, color='darkorange', lw=2)
+    plt.plot(recall, precision, color='darkorange', lw=2,
+             label=f'AP = {avg_precision:.4f}')
     
     plt.xlim([0.0, 1.0])
     plt.ylim([0.0, 1.05])
     plt.xlabel('Recall', fontsize=12)
     plt.ylabel('Precision', fontsize=12)
     plt.title(f'Precision-Recall Curve - {model_name}', fontsize=16, fontweight='bold')
+    plt.legend(loc="lower left")
     plt.grid(alpha=0.3)
     
     plt.tight_layout()
     
     if save_path:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
         logger.info(f"Precision-Recall curve saved to: {save_path}")
     
@@ -325,6 +361,7 @@ def compare_models(
     plt.tight_layout()
     
     if save_path:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
         logger.info(f"Model comparison saved to: {save_path}")
     
@@ -350,6 +387,9 @@ def save_evaluation_results(
         results: Evaluation results dictionary
         filepath: Path to save the results
     """
+    # Ensure parent directory exists
+    Path(filepath).parent.mkdir(parents=True, exist_ok=True)
+    
     with open(filepath, 'w') as f:
         json.dump(results, f, indent=2)
     
@@ -397,7 +437,7 @@ def create_evaluation_report(
         save_path = Path(save_dir) / "evaluation_report.json"
         save_evaluation_results(report, save_path)
     
-    logger.info(" Evaluation report created!")
+    logger.info("✅ Evaluation report created!")
     
     return report
 
@@ -445,4 +485,4 @@ def analyze_misclassifications(
     logger.info(f"Found {len(misclassified_indices)} misclassifications for {model_name}")
     logger.info(f"Showing top {min(top_n, len(misclassified_indices))} misclassifications:")
     
-    return df_misclassified
+    return df_misclassified # type: ignore
