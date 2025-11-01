@@ -88,26 +88,27 @@ class ModelConfig:
     NUM_LABELS = 2  # Binary classification (Real=0, Fake=1)
 
     # Tokenization
-    MAX_LENGTH = 256  # RoBERTa can handle up to 512, using 256 for speed
+    MAX_LENGTH = 512  # RoBERTa can handle up to 512, using 256 for speed
     PADDING = "max_length"
     TRUNCATION = True
 
     # Training parameters
-    BATCH_SIZE = 16  # Reduced for RoBERTa (larger model than DistilBERT)
-    LEARNING_RATE = 2e-05  # Standard for BERT/RoBERTa fine-tuning
-    NUM_EPOCHS = 3  # Usually 3-5 epochs is sufficient
-    WARMUP_STEPS = 500
-    WEIGHT_DECAY = 0.01
+    BATCH_SIZE = 32  # Reduced for RoBERTa (larger model than DistilBERT)
+    LEARNING_RATE = 1e-05  # Standard for BERT/RoBERTa fine-tuning
+    NUM_EPOCHS = 5  # Usually 3-5 epochs is sufficient
+    WARMUP_STEPS = 1000
+    WEIGHT_DECAY = 0.05
+    DROPOUT_RATE = 0.2
     
     # Optimizer
     OPTIMIZER = "adamw"
     EPSILON = 1e-8
 
     # Learning rate scheduler
-    SCHEDULER = "linear"  # Options: linear, cosine
+    SCHEDULER = "cosine"  # Options: linear, cosine
 
     # Early stopping
-    EARLY_STOPPING_PATIENCE = 3
+    EARLY_STOPPING_PATIENCE = 4
     EARLY_STOPPING_MIN_DELTA = 0.001
 
     # Model saving
@@ -140,7 +141,7 @@ class TrainingConfig:
     USE_FP16 = True
 
     # Gradient accumulation (simulate larger batch size)
-    GRADIENT_ACCUMULATION_STEPS = 2  # Increased for RoBERTa
+    GRADIENT_ACCUMULATION_STEPS = 1  # Increased for RoBERTa
 
     # Gradient clipping (prevent exploding gradients)
     MAX_GRAD_NORM = 1.0
