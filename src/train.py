@@ -42,7 +42,7 @@ try:
             EARLY_STOPPING_AVAILABLE = True
         except ImportError:
             EarlyStoppingCallback = None
-            TrainerCallback = None  
+            TrainerCallback = object    
             EARLY_STOPPING_AVAILABLE = False
     
     TRANSFORMERS_AVAILABLE = True
