@@ -34,6 +34,7 @@ try:
     
     try:
         from transformers import EarlyStoppingCallback
+        from transformers import TrainerCallback  # THÊM DÒNG NÀY
         EARLY_STOPPING_AVAILABLE = True
     except ImportError:
         try:
@@ -41,6 +42,7 @@ try:
             EARLY_STOPPING_AVAILABLE = True
         except ImportError:
             EarlyStoppingCallback = None
+            TrainerCallback = None  
             EARLY_STOPPING_AVAILABLE = False
     
     TRANSFORMERS_AVAILABLE = True
@@ -90,9 +92,10 @@ def log_gpu_memory():
         logger.info(f"💾 GPU Memory - Allocated: {allocated:.2f}GB, Reserved: {reserved:.2f}GB")
 
 
-class MemoryCallback:
+class MemoryCallback(TrainerCallback):
     """Callback to manage memory during training"""
     def __init__(self, clear_every_n_steps=100):
+        super().__init__()
         self.clear_every_n_steps = clear_every_n_steps
         self.step = 0
     
@@ -102,6 +105,7 @@ class MemoryCallback:
             clear_gpu_memory()
             if ColabConfig.LOG_GPU_MEMORY:
                 log_gpu_memory()
+        return control
 
 
 # ============================================================================
