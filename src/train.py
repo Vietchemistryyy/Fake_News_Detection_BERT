@@ -348,7 +348,7 @@ class EnhancedBertTrainer:
             label_smoothing_factor=ModelConfig.LABEL_SMOOTHING_FACTOR,
             
             # Learning rate scheduler
-            lr_scheduler_type=ModelConfig.SCHEDULER.replace('_', '-'),
+            lr_scheduler_type=ModelConfig.SCHEDULER,
             
             # Mixed precision
             fp16=TrainingConfig.USE_FP16 and torch.cuda.is_available(),
