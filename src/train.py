@@ -370,18 +370,17 @@ def setup_model_and_tokenizer(self):
             # Learning rate scheduler
             lr_scheduler_type=ModelConfig.SCHEDULER,
             
-            # Mixed precision and memory settings
+            # Memory and precision settings
             fp16=False,  # Disable mixed precision
             fp16_opt_level="O0",
             gradient_checkpointing=False,  # Explicitly disable gradient checkpointing
             
-            # Evaluation
+            # Evaluation settings
             evaluation_strategy="epoch",
             eval_accumulation_steps=10,  # Save memory during evaluation
             
-            # Memory optimization
+            # Additional stability settings
             max_grad_norm=1.0,  # Add gradient clipping
-            gradient_accumulation_steps=ModelConfig.GRADIENT_ACCUMULATION_STEPS,
             
             # Saving
             save_strategy="epoch",
