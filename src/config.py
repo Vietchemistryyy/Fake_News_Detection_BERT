@@ -1,7 +1,6 @@
 """
 Configuration file for Fake News Detection project
 Centralized settings for data paths, model parameters, and training configs
-UPDATED: Optimized for DeBERTa-v3-base with enhanced training settings
 """
 
 import os
@@ -13,7 +12,7 @@ from pathlib import Path
 
 # Root directory
 ROOT_DIR = Path(__file__).parent.parent
-PROJECT_NAME = "Fake_News_Detection_DeBERTa"
+PROJECT_NAME = "Fake_News_Detection"
 
 # Data paths
 DATA_DIR = ROOT_DIR / "data"
@@ -24,7 +23,6 @@ SAMPLE_DATA_DIR = DATA_DIR / "sample"
 # Model paths
 MODELS_DIR = ROOT_DIR / "models"
 TOKENIZER_DIR = MODELS_DIR / "tokenizer"
-CHECKPOINT_DIR = MODELS_DIR / "checkpoints"
 
 # Results paths
 RESULTS_DIR = ROOT_DIR / "results"
@@ -79,106 +77,84 @@ class DataConfig:
 
 
 # ============================================================================
-# MODEL CONFIGURATION - OPTIMIZED FOR DEBERTA-V3
+# MODEL CONFIGURATION
 # ============================================================================
 
 class ModelConfig:
     """Model architecture and training configuration"""
 
-    # ✨ NEW: Model selection - DeBERTa-v3-base
-    MODEL_NAME = "microsoft/deberta-v3-base"  # CHANGED from roberta-base
-    
-    # Alternative models (comment/uncomment to switch):
-    # MODEL_NAME = "microsoft/deberta-v3-large"  # Needs Colab Pro
-    # MODEL_NAME = "roberta-large"  # Alternative
-    # MODEL_NAME = "google/electra-base-discriminator"  # Fast & efficient
-    
+    # Model selection - UPDATED FOR ROBERTA
+    MODEL_NAME = "roberta-base"  # Changed from bert-base-uncased to roberta-base
     NUM_LABELS = 2  # Binary classification (Real=0, Fake=1)
 
-    # ✨ OPTIMIZED: Tokenization for DeBERTa
-    MAX_LENGTH = 384  # Increased from 256 (DeBERTa handles longer sequences better)
+    # Tokenization
+    MAX_LENGTH = 256  # Maximum sequence length (256 for speed, 512 for accuracy)
     PADDING = "max_length"
     TRUNCATION = True
 
-    # ✨ OPTIMIZED: Training parameters for DeBERTa-v3
-    BATCH_SIZE = 16  # Reduced for DeBERTa (larger than RoBERTa)
-    GRADIENT_ACCUMULATION_STEPS = 2  # Effective batch size = 32
-    LEARNING_RATE = 2e-05  # Increased slightly (DeBERTa is more stable)
-    NUM_EPOCHS = 10  # Increased from 5 (DeBERTa benefits from more epochs)
-    WARMUP_RATIO = 0.1  # 10% of training for warmup
-    WEIGHT_DECAY = 0.01  # Standard for DeBERTa
-    DROPOUT_RATE = 0.1  # DeBERTa's default dropout
-    
-    # ✨ NEW: Label smoothing (reduces overfitting)
-    LABEL_SMOOTHING_FACTOR = 0.0
+    # Training parameters
+    BATCH_SIZE = 16  # Reduced from 32 for RoBERTa (uses more memory)
+    LEARNING_RATE = 2e-5  # Standard for RoBERTa fine-tuning
+    NUM_EPOCHS = 3  # Usually 3-5 epochs is sufficient
+    WARMUP_STEPS = 500
+    WEIGHT_DECAY = 0.01
     
     # Optimizer
     OPTIMIZER = "adamw"
     EPSILON = 1e-8
-    MAX_GRAD_NORM = 1.0  # Gradient clipping
 
-    # ✨ IMPROVED: Learning rate scheduler
-    SCHEDULER = "cosine_with_restarts"  # Better than linear
-    NUM_CYCLES = 2  # For cosine with restarts
+    # Learning rate scheduler
+    SCHEDULER = "linear"  # Options: linear, cosine
 
-    # ✨ IMPROVED: Early stopping
-    EARLY_STOPPING_PATIENCE = 3  # Stop if no improvement for 3 epochs
+    # Early stopping
+    EARLY_STOPPING_PATIENCE = 3
     EARLY_STOPPING_MIN_DELTA = 0.001
 
     # Model saving
-    SAVE_STRATEGY = "epoch"
+    SAVE_STRATEGY = "epoch"  # Save after each epoch
     SAVE_TOTAL_LIMIT = 3  # Keep only best 3 checkpoints
     LOAD_BEST_MODEL_AT_END = True
 
     # Evaluation
-    EVALUATION_STRATEGY = "epoch"
-    METRIC_FOR_BEST_MODEL = "f1"  # Use F1-score
-    GREATER_IS_BETTER = True
+    EVALUATION_STRATEGY = "epoch"  # Evaluate after each epoch
+    METRIC_FOR_BEST_MODEL = "f1"  # Use F1-score to select best model
 
     # Model file names
-    BEST_MODEL_NAME = "best_deberta_model"
+    BEST_MODEL_NAME = "best_model.pt"
     BASELINE_MODEL_NAME = "baseline_model.pkl"
-    FINAL_MODEL_NAME = "final_deberta_model"
+    FINAL_MODEL_NAME = "final_model.pt"
 
 
 # ============================================================================
-# TRAINING CONFIGURATION - OPTIMIZED FOR COLAB
+# TRAINING CONFIGURATION
 # ============================================================================
 
 class TrainingConfig:
     """Training environment configuration"""
 
     # Device
-    USE_CUDA = True
-    DEVICE = "cuda" if USE_CUDA else "cpu"
+    USE_CUDA = True  # Set to False to use CPU only
+    
+    # Mixed precision training (faster on modern GPUs)
+    USE_FP16 = True
 
-    # ✨ OPTIMIZED: Mixed precision training (essential for DeBERTa)
-    USE_FP16 = True  # Reduces memory by ~50%
-    FP16_OPT_LEVEL = "O1"  # Automatic mixed precision
+    # Gradient accumulation (simulate larger batch size)
+    GRADIENT_ACCUMULATION_STEPS = 2  # Increased for RoBERTa
 
-    # ✨ IMPROVED: Gradient accumulation
-    GRADIENT_ACCUMULATION_STEPS = 2  # Simulate batch size of 32
-
-    # Gradient clipping
+    # Gradient clipping (prevent exploding gradients)
     MAX_GRAD_NORM = 1.0
 
-    # ✨ IMPROVED: Logging
-    LOGGING_STEPS = 50  # Log every 50 steps (more frequent)
+    # Logging
+    LOGGING_STEPS = 100  # Log every N steps
     LOGGING_DIR = RESULTS_DIR / "logs"
-    LOGGING_FIRST_STEP = True
 
     # Reproducibility
     SEED = 42
     DETERMINISTIC = True
 
-    # ✨ OPTIMIZED: DataLoader for Colab
-    NUM_WORKERS = 2  # Colab works best with 2 workers
-    PIN_MEMORY = True
-    PREFETCH_FACTOR = 2  # Prefetch 2 batches
-
-    # ✨ NEW: Memory optimization
-    GRADIENT_CHECKPOINTING = False  # Disable gradient checkpointing for stability
-    OPTIM = "adamw_torch"  # Use PyTorch's AdamW (faster on GPU)
+    # DataLoader
+    NUM_WORKERS = 4  # Number of workers for data loading
+    PIN_MEMORY = True  # Faster data transfer to GPU
 
 
 # ============================================================================
@@ -207,9 +183,39 @@ class EvaluationConfig:
     # ROC curve
     SAVE_ROC_CURVE = True
     ROC_CURVE_FILE = "roc_curve.png"
-    
-    # ✨ NEW: Per-epoch evaluation
-    EVAL_ACCUMULATION_STEPS = 10  # Accumulate predictions (saves memory)
+
+
+# ============================================================================
+# API CONFIGURATION (for Phase 3)
+# ============================================================================
+
+class APIConfig:
+    """FastAPI configuration"""
+
+    # API settings
+    API_TITLE = "Fake News Detection API"
+    API_VERSION = "1.0.0"
+    API_DESCRIPTION = "API for detecting fake news using RoBERTa"
+
+    # Server
+    HOST = "0.0.0.0"
+    PORT = 8000
+    RELOAD = True  # Auto-reload on code changes (dev only)
+
+    # CORS
+    ALLOW_ORIGINS = ["http://localhost:3000"]  # Next.js frontend
+    ALLOW_CREDENTIALS = True
+    ALLOW_METHODS = ["*"]
+    ALLOW_HEADERS = ["*"]
+
+    # MongoDB
+    MONGODB_URL = "mongodb://localhost:27017"
+    DATABASE_NAME = "fake_news_db"
+    COLLECTION_NAME = "predictions"
+
+    # Model loading
+    MODEL_PATH = MODELS_DIR / "roberta"  # Updated path
+    TOKENIZER_PATH = MODEL_PATH
 
 
 # ============================================================================
@@ -223,71 +229,16 @@ class BaselineConfig:
     MAX_FEATURES = 10000
     MIN_DF = 5
     MAX_DF = 0.8
-    NGRAM_RANGE = (1, 2)
+    NGRAM_RANGE = (1, 2)  # Unigrams and bigrams
 
     # Logistic Regression
     SOLVER = "lbfgs"
     MAX_ITER = 1000
-    C = 1.0
+    C = 1.0  # Regularization strength
 
-    # Model files
+    # Model file
     TFIDF_VECTORIZER_FILE = "tfidf_vectorizer.pkl"
     BASELINE_MODEL_FILE = "baseline_logistic_regression.pkl"
-
-
-# ============================================================================
-# COLAB-SPECIFIC CONFIGURATION
-# ============================================================================
-
-class ColabConfig:
-    """Google Colab specific settings"""
-    
-    # ✨ NEW: Colab environment detection
-    IS_COLAB = 'COLAB_GPU' in os.environ or 'google.colab' in str(globals())
-    
-    # ✨ NEW: Memory management
-    CLEAR_CACHE_EVERY_N_STEPS = 100  # Clear CUDA cache periodically
-    
-    # ✨ NEW: Checkpointing
-    SAVE_CHECKPOINT_TO_DRIVE = True  # Save to Google Drive
-    DRIVE_CHECKPOINT_DIR = "/content/drive/MyDrive/fake_news_checkpoints"
-    
-    # ✨ NEW: Tensorboard
-    USE_TENSORBOARD = True
-    TENSORBOARD_DIR = "/content/drive/MyDrive/fake_news_logs"
-    
-    # ✨ NEW: Resource monitoring
-    LOG_GPU_MEMORY = True
-    LOG_EVERY_N_STEPS = 50
-
-
-# ============================================================================
-# ADVANCED TRAINING CONFIGURATION
-# ============================================================================
-
-class AdvancedConfig:
-    """Advanced training techniques"""
-    
-    # ✨ NEW: Data augmentation
-    USE_DATA_AUGMENTATION = False  # Set True to enable
-    AUGMENTATION_RATIO = 0.2  # Augment 20% of training data
-    
-    # ✨ NEW: Ensemble settings
-    USE_ENSEMBLE = False
-    ENSEMBLE_MODELS = [
-        "microsoft/deberta-v3-base",
-        "roberta-large",
-    ]
-    ENSEMBLE_WEIGHTS = [0.6, 0.4]
-    
-    # ✨ NEW: Learning rate finder
-    USE_LR_FINDER = False  # Run LR finder before training
-    LR_FINDER_STEPS = 100
-    
-    # ✨ NEW: Stochastic Weight Averaging
-    USE_SWA = False  # Improves generalization
-    SWA_START_EPOCH = 7
-    SWA_LR = 5e-6
 
 
 # ============================================================================
@@ -302,19 +253,26 @@ def create_directories():
         PROCESSED_DATA_DIR,
         SAMPLE_DATA_DIR,
         MODELS_DIR,
+        MODELS_DIR / "roberta",  # Add RoBERTa model directory
+        MODELS_DIR / "baseline",  # Add baseline model directory
         TOKENIZER_DIR,
-        CHECKPOINT_DIR,
         RESULTS_DIR,
         METRICS_DIR,
+        METRICS_DIR / "roberta",  # Add RoBERTa metrics directory
+        METRICS_DIR / "baseline",  # Add baseline metrics directory
         PREDICTIONS_DIR,
+        PREDICTIONS_DIR / "roberta",  # Add RoBERTa predictions directory
+        PREDICTIONS_DIR / "baseline",  # Add baseline predictions directory
         VISUALIZATIONS_DIR,
+        VISUALIZATIONS_DIR / "roberta",  # Add RoBERTa visualizations directory
+        VISUALIZATIONS_DIR / "baseline",  # Add baseline visualizations directory
         TrainingConfig.LOGGING_DIR,
     ]
 
     for directory in directories:
         directory.mkdir(parents=True, exist_ok=True)
 
-    print("✅ All directories created successfully.")
+    print("All directories created successfully.")
 
 
 def print_config():
@@ -322,73 +280,21 @@ def print_config():
     print("=" * 80)
     print("CONFIGURATION SUMMARY")
     print("=" * 80)
-    print(f"\n🚀 Project: {PROJECT_NAME}")
-    print(f"📁 Root: {ROOT_DIR}")
-    
-    print(f"\n📊 Data Configuration:")
+    print(f"\nProject Root: {ROOT_DIR}")
+    print(f"\nData Configuration:")
     print(f"   - Raw Data: {DataConfig.RAW_DATA_PATH}")
-    print(f"   - Splits: {DataConfig.TRAIN_RATIO}/{DataConfig.VAL_RATIO}/{DataConfig.TEST_RATIO}")
-    
-    print(f"\n🤖 Model Configuration:")
+    print(f"   - Train/Val/Test: {DataConfig.TRAIN_RATIO}/{DataConfig.VAL_RATIO}/{DataConfig.TEST_RATIO}")
+    print(f"\nModel Configuration:")
     print(f"   - Model: {ModelConfig.MODEL_NAME}")
     print(f"   - Max Length: {ModelConfig.MAX_LENGTH}")
     print(f"   - Batch Size: {ModelConfig.BATCH_SIZE}")
-    print(f"   - Gradient Accumulation: {ModelConfig.GRADIENT_ACCUMULATION_STEPS}")
-    print(f"   - Effective Batch Size: {ModelConfig.BATCH_SIZE * ModelConfig.GRADIENT_ACCUMULATION_STEPS}")
     print(f"   - Learning Rate: {ModelConfig.LEARNING_RATE}")
     print(f"   - Epochs: {ModelConfig.NUM_EPOCHS}")
-    print(f"   - Warmup Ratio: {ModelConfig.WARMUP_RATIO}")
-    print(f"   - Label Smoothing: {ModelConfig.LABEL_SMOOTHING_FACTOR}")
-    
-    print(f"\n⚙️  Training Configuration:")
-    print(f"   - Device: {TrainingConfig.DEVICE}")
+    print(f"\nTraining Configuration:")
     print(f"   - FP16: {TrainingConfig.USE_FP16}")
-    print(f"   - Gradient Checkpointing: {TrainingConfig.GRADIENT_CHECKPOINTING}")
+    print(f"   - Gradient Accumulation: {TrainingConfig.GRADIENT_ACCUMULATION_STEPS}")
     print(f"   - Seed: {TrainingConfig.SEED}")
-    
-    if ColabConfig.IS_COLAB:
-        print(f"\n☁️  Colab Configuration:")
-        print(f"   - Environment: Google Colab")
-        print(f"   - Save to Drive: {ColabConfig.SAVE_CHECKPOINT_TO_DRIVE}")
-        print(f"   - TensorBoard: {ColabConfig.USE_TENSORBOARD}")
-    
     print("=" * 80)
-
-
-def get_model_info():
-    """Get information about the selected model"""
-    model_info = {
-        "microsoft/deberta-v3-base": {
-            "params": "184M",
-            "memory": "~3GB",
-            "speed": "Medium",
-            "accuracy": "High (95-96%)",
-            "recommended_batch": 16
-        },
-        "microsoft/deberta-v3-large": {
-            "params": "435M",
-            "memory": "~6GB",
-            "speed": "Slow",
-            "accuracy": "Very High (96-97%)",
-            "recommended_batch": 8
-        },
-        "roberta-base": {
-            "params": "125M",
-            "memory": "~2GB",
-            "speed": "Fast",
-            "accuracy": "Good (93-94%)",
-            "recommended_batch": 32
-        },
-        "roberta-large": {
-            "params": "355M",
-            "memory": "~5GB",
-            "speed": "Medium",
-            "accuracy": "High (94-95%)",
-            "recommended_batch": 16
-        }
-    }
-    
-    return model_info.get(ModelConfig.MODEL_NAME, {})
 
 
 # ============================================================================
@@ -401,9 +307,3 @@ if __name__ == "__main__":
 
     # Print configuration
     print_config()
-    
-    # Print model info
-    print("\n📊 Model Information:")
-    info = get_model_info()
-    for key, value in info.items():
-        print(f"   - {key}: {value}")

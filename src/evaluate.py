@@ -25,7 +25,7 @@ from pathlib import Path
 import json
 
 try:
-    from src.config import VISUALIZATIONS_DIR, METRICS_DIR
+    from .config import VISUALIZATIONS_DIR, METRICS_DIR
 except ImportError:
     # Fallback for when running the file directly
     import sys
@@ -485,4 +485,4 @@ def analyze_misclassifications(
     logger.info(f"Found {len(misclassified_indices)} misclassifications for {model_name}")
     logger.info(f"Showing top {min(top_n, len(misclassified_indices))} misclassifications:")
     
-    return df_misclassified # type: ignore
+    return df_misclassified

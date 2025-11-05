@@ -1,7 +1,6 @@
 """
 Training functions for Fake News Detection models
-UPDATED: Enhanced training for DeBERTa-v3 with advanced techniques
-Optimized for Google Colab
+Includes training for both baseline and BERT models
 """
 
 import torch
@@ -14,27 +13,25 @@ from typing import Dict, List, Any, Optional, Tuple
 import json
 from pathlib import Path
 import time
-import gc
-import os
 
-# Try to import transformers
+# Try to import transformers, handle import error gracefully
 try:
     import transformers
     from transformers import (
         TrainingArguments,
         AutoTokenizer,
-        AutoModelForSequenceClassification,
-        get_scheduler
+        AutoModelForSequenceClassification
     )
     
+    # Try to import Trainer with fallback
     try:
         from transformers import Trainer
     except ImportError:
         from transformers.trainer import Trainer
     
+    # Try to import EarlyStoppingCallback with fallback - MAKE IT OPTIONAL
     try:
         from transformers import EarlyStoppingCallback
-        from transformers import TrainerCallback  # THÊM DÒNG NÀY
         EARLY_STOPPING_AVAILABLE = True
     except ImportError:
         try:
@@ -42,75 +39,37 @@ try:
             EARLY_STOPPING_AVAILABLE = True
         except ImportError:
             EarlyStoppingCallback = None
-            TrainerCallback = object    
             EARLY_STOPPING_AVAILABLE = False
     
     TRANSFORMERS_AVAILABLE = True
     print(f"✅ Transformers {transformers.__version__} loaded successfully")
+    if EARLY_STOPPING_AVAILABLE:
+        print(f"✅ EarlyStoppingCallback available")
+    else:
+        print(f"⚠️  EarlyStoppingCallback not available (will train without early stopping)")
 except ImportError as e:
     print(f"⚠️  Warning: Transformers not available: {e}")
+    print("💡 Only baseline model training will be available.")
     TRANSFORMERS_AVAILABLE = False
     EARLY_STOPPING_AVAILABLE = False
 
 try:
-    from .config import ModelConfig, TrainingConfig, ColabConfig, METRICS_DIR
+    from .config import ModelConfig, TrainingConfig, METRICS_DIR
     from .model import BaselineModel
     from .evaluate import compute_metrics
 except ImportError:
+    # Fallback for when running the file directly
     import sys
     import os
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from src.config import ModelConfig, TrainingConfig, ColabConfig, METRICS_DIR
+    from src.config import ModelConfig, TrainingConfig, METRICS_DIR
     from src.model import BaselineModel
     from src.evaluate import compute_metrics
 
 # Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
-# ============================================================================
-# MEMORY MANAGEMENT UTILITIES
-# ============================================================================
-
-def clear_gpu_memory():
-    """Clear GPU memory cache"""
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
-        gc.collect()
-        logger.debug("🧹 GPU memory cleared")
-
-
-def log_gpu_memory():
-    """Log current GPU memory usage"""
-    if torch.cuda.is_available():
-        allocated = torch.cuda.memory_allocated() / 1024**3
-        reserved = torch.cuda.memory_reserved() / 1024**3
-        logger.info(f"💾 GPU Memory - Allocated: {allocated:.2f}GB, Reserved: {reserved:.2f}GB")
-
-
-class MemoryCallback(TrainerCallback):
-    """Callback to manage memory during training"""
-    def __init__(self, clear_every_n_steps=100):
-        super().__init__()
-        self.clear_every_n_steps = clear_every_n_steps
-        self.step = 0
-    
-    def on_step_end(self, args, state, control, **kwargs):
-        self.step += 1
-        if self.step % self.clear_every_n_steps == 0:
-            clear_gpu_memory()
-            if ColabConfig.LOG_GPU_MEMORY:
-                log_gpu_memory()
-        return control
-
-
-# ============================================================================
-# BASELINE MODEL TRAINING
-# ============================================================================
 
 def train_baseline_model(
     train_df,
@@ -200,7 +159,13 @@ def train_baseline_model(
         'training_time': float(training_time),
         'train_metrics': train_metrics,
         'val_metrics': val_metrics,
-        'test_metrics': test_metrics
+        'test_metrics': test_metrics,
+        'train_predictions': train_preds.tolist(),
+        'val_predictions': val_preds.tolist(),
+        'test_predictions': test_preds.tolist(),
+        'train_probabilities': train_proba.tolist(),
+        'val_probabilities': val_proba.tolist(),
+        'test_probabilities': test_proba.tolist()
     }
     
     logger.info("✅ Baseline model training completed!")
@@ -211,14 +176,9 @@ def train_baseline_model(
     return results
 
 
-# ============================================================================
-# ENHANCED BERT/DEBERTA TRAINER CLASS
-# ============================================================================
-
-class EnhancedBertTrainer:
+class BertTrainer:
     """
-    Enhanced BERT/DeBERTa trainer with advanced techniques
-    Optimized for Google Colab with memory management
+    Custom BERT/RoBERTa trainer class with unified interface
     """
     
     def __init__(
@@ -233,62 +193,30 @@ class EnhancedBertTrainer:
             )
         
         self.model_name = model_name
-        self.output_dir = output_dir or "results/models/deberta"
+        self.output_dir = output_dir or "results/models/bert"
         self.model = None
         self.tokenizer = None
         self.trainer = None
         
-        # Detect Colab environment
-        self.is_colab = ColabConfig.IS_COLAB
+        logger.info(f"🤖 BertTrainer initialized for: {model_name}")
+        logger.info(f"📁 Output directory: {self.output_dir}")
         
-        logger.info(f"🤖 EnhancedBertTrainer initialized")
-        logger.info(f"   Model: {model_name}")
-        logger.info(f"   Output: {self.output_dir}")
-        logger.info(f"   Environment: {'Google Colab' if self.is_colab else 'Local'}")
+    def setup_model_and_tokenizer(self):
+        """
+        Setup model and tokenizer
+        """
+        logger.info(f"📥 Loading {self.model_name}...")
         
-def setup_model_and_tokenizer(self):
-    """Setup model and tokenizer with optimizations"""
-    logger.info(f"📥 Loading {self.model_name}...")
-
-    try:
-        # Clear GPU cache before loading
-        clear_gpu_memory()
-        
-        # Load tokenizer
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-
-        # Load model with optimizations
-        self.model = AutoModelForSequenceClassification.from_pretrained(
-            self.model_name,
-            num_labels=ModelConfig.NUM_LABELS,
-            hidden_dropout_prob=ModelConfig.DROPOUT_RATE,
-            attention_probs_dropout_prob=ModelConfig.DROPOUT_RATE,
-            gradient_checkpointing=False  # Disable gradient checkpointing
-        )
-
-        # 🚫 Tắt gradient checkpointing triệt để để tránh lỗi backward graph
-        if hasattr(self.model, "gradient_checkpointing_disable"):
-            self.model.gradient_checkpointing_disable()
-        if hasattr(self.model.config, "gradient_checkpointing"):
-            self.model.config.gradient_checkpointing = False
-        
-        # Đảm bảo model ở chế độ train và clear memory
-        self.model.train()
-        clear_gpu_memory()
-        
-        logger.info("🧠 Gradient checkpointing disabled (for stability)")
-        logger.info("✅ Model and tokenizer loaded successfully")
-        
-        # Log GPU memory usage
-        if torch.cuda.is_available():
-            logger.info(f"💾 GPU Memory Status:")
-            logger.info(f"   Allocated: {torch.cuda.memory_allocated()/1024**2:.1f}MB")
-            logger.info(f"   Reserved:  {torch.cuda.memory_reserved()/1024**2:.1f}MB")
-            
-    except Exception as e:
-        logger.error(f"❌ Failed to load model: {e}")
-        raise
-
+        try:
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+            self.model = AutoModelForSequenceClassification.from_pretrained(
+                self.model_name,
+                num_labels=ModelConfig.NUM_LABELS
+            )
+            logger.info("✅ Model and tokenizer loaded successfully")
+        except Exception as e:
+            logger.error(f"❌ Failed to load model: {e}")
+            raise
     
     def train(
         self,
@@ -297,181 +225,95 @@ def setup_model_and_tokenizer(self):
         num_epochs: int = ModelConfig.NUM_EPOCHS,
         batch_size: int = ModelConfig.BATCH_SIZE,
         learning_rate: float = ModelConfig.LEARNING_RATE,
-        warmup_ratio: float = ModelConfig.WARMUP_RATIO,
+        warmup_steps: int = ModelConfig.WARMUP_STEPS,
         weight_decay: float = ModelConfig.WEIGHT_DECAY
     ) -> Dict[str, Any]:
         """
-        Train the model with enhanced settings
+        Train the BERT/RoBERTa model
         
         Args:
             train_dataset: Training dataset
             val_dataset: Validation dataset
             num_epochs: Number of training epochs
-            batch_size: Batch size per device
+            batch_size: Batch size
             learning_rate: Learning rate
-            warmup_ratio: Warmup ratio
+            warmup_steps: Number of warmup steps
             weight_decay: Weight decay
             
         Returns:
-            Dictionary containing training results
+            Training results dictionary
         """
         if self.model is None or self.tokenizer is None:
             self.setup_model_and_tokenizer()
         
-        logger.info("=" * 80)
-        logger.info(f"🚀 TRAINING {self.model_name.upper()}")
-        logger.info("=" * 80)
+        logger.info("="*80)
+        logger.info(f"TRAINING {self.model_name.upper()} MODEL")
+        logger.info("="*80)
         
         start_time = time.time()
         
         # Check device
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         logger.info(f"🖥️  Device: {device}")
+        logger.info(f"📊 Training samples: {len(train_dataset)}")
+        logger.info(f"📊 Validation samples: {len(val_dataset)}")
+        logger.info(f"⚙️  Batch size: {batch_size}")
+        logger.info(f"⚙️  Learning rate: {learning_rate}")
+        logger.info(f"⚙️  Epochs: {num_epochs}")
         
-        if torch.cuda.is_available():
-            logger.info(f"   GPU: {torch.cuda.get_device_name(0)}")
-            log_gpu_memory()
-        
-        logger.info(f"\n📊 Dataset Information:")
-        logger.info(f"   Training samples: {len(train_dataset)}")
-        logger.info(f"   Validation samples: {len(val_dataset)}")
-        
-        logger.info(f"\n⚙️  Training Hyperparameters:")
-        logger.info(f"   Batch size: {batch_size}")
-        logger.info(f"   Gradient accumulation: {ModelConfig.GRADIENT_ACCUMULATION_STEPS}")
-        logger.info(f"   Effective batch size: {batch_size * ModelConfig.GRADIENT_ACCUMULATION_STEPS}")
-        logger.info(f"   Learning rate: {learning_rate}")
-        logger.info(f"   Epochs: {num_epochs}")
-        logger.info(f"   Warmup ratio: {warmup_ratio}")
-        logger.info(f"   Weight decay: {weight_decay}")
-        logger.info(f"   Label smoothing: {ModelConfig.LABEL_SMOOTHING_FACTOR}")
-        
-        # Training arguments with advanced settings
+        # Training arguments
         training_args = TrainingArguments(
-            # Output
             output_dir=self.output_dir,
-            
-            # Training
             num_train_epochs=num_epochs,
             per_device_train_batch_size=batch_size,
             per_device_eval_batch_size=batch_size,
-            gradient_accumulation_steps=ModelConfig.GRADIENT_ACCUMULATION_STEPS,
-            
-            # Optimization
-            learning_rate=learning_rate,
+            warmup_steps=warmup_steps,
             weight_decay=weight_decay,
-            warmup_ratio=warmup_ratio,
-            max_grad_norm=TrainingConfig.MAX_GRAD_NORM,
-            optim=TrainingConfig.OPTIM,
-            
-            # Label smoothing
-            label_smoothing_factor=ModelConfig.LABEL_SMOOTHING_FACTOR,
-            
-            # Learning rate scheduler
-            lr_scheduler_type=ModelConfig.SCHEDULER,
-            
-            # Memory and precision settings
-            fp16=False,  # Disable mixed precision
-            fp16_opt_level="O0",
-            gradient_checkpointing=False,  # Explicitly disable gradient checkpointing
-            
-            # Evaluation settings
-            evaluation_strategy="epoch",
-            eval_accumulation_steps=10,  # Save memory during evaluation
-            
-            # Additional stability settings
-            max_grad_norm=1.0,  # Add gradient clipping
-            
-            # Saving
-            save_strategy="epoch",
-            save_total_limit=ModelConfig.SAVE_TOTAL_LIMIT,
-            load_best_model_at_end=True,
-            metric_for_best_model=ModelConfig.METRIC_FOR_BEST_MODEL,
-            greater_is_better=ModelConfig.GREATER_IS_BETTER,
-            
-            # Logging
+            learning_rate=learning_rate,
             logging_dir=f"{self.output_dir}/logs",
-            logging_steps=TrainingConfig.LOGGING_STEPS,
-            logging_first_step=TrainingConfig.LOGGING_FIRST_STEP,
-            report_to="none",  # Disable wandb
-            
-            # DataLoader
+            logging_steps=100,
+            eval_strategy="epoch",  # Changed from evaluation_strategy
+            save_strategy="epoch",
+            load_best_model_at_end=True,
+            metric_for_best_model="f1",
+            greater_is_better=True,
+            save_total_limit=3,
+            fp16=TrainingConfig.USE_FP16 and torch.cuda.is_available(),
             dataloader_num_workers=TrainingConfig.NUM_WORKERS,
-            dataloader_pin_memory=TrainingConfig.PIN_MEMORY,
-            dataloader_prefetch_factor=TrainingConfig.PREFETCH_FACTOR if TrainingConfig.NUM_WORKERS > 0 else None,
-            
-            # Misc
-            seed=TrainingConfig.SEED,
             remove_unused_columns=False,
-            disable_tqdm=False,
+            report_to="none",  # Disable wandb/tensorboard
             push_to_hub=False,
+            disable_tqdm=False,  # Show progress bar
         )
         
         # Prepare callbacks
         callbacks = []
-        
-        # Early stopping
         if EARLY_STOPPING_AVAILABLE:
-            callbacks.append(
-                EarlyStoppingCallback(
-                    early_stopping_patience=ModelConfig.EARLY_STOPPING_PATIENCE
-                )
-            )
-            logger.info(f"✅ Early stopping enabled (patience={ModelConfig.EARLY_STOPPING_PATIENCE})")
+            callbacks.append(EarlyStoppingCallback(early_stopping_patience=3))
+            logger.info("✅ Early stopping enabled (patience=3)")
+        else:
+            logger.warning("⚠️  Early stopping not available - training all epochs")
         
-        # Memory management callback
-        if ColabConfig.CLEAR_CACHE_EVERY_N_STEPS:
-            callbacks.append(MemoryCallback(ColabConfig.CLEAR_CACHE_EVERY_N_STEPS))
-            logger.info(f"✅ Memory management enabled (clear every {ColabConfig.CLEAR_CACHE_EVERY_N_STEPS} steps)")
-        
-        # Create trainer with additional settings for stability
+        # Create trainer
         try:
-            # Clear memory before creating trainer
-            clear_gpu_memory()
-            
             self.trainer = Trainer(
                 model=self.model,
                 args=training_args,
                 train_dataset=train_dataset,
                 eval_dataset=val_dataset,
                 compute_metrics=compute_metrics,
-                callbacks=callbacks if callbacks else None,
-                # Add additional settings for stability
-                ddp_find_unused_parameters=False,  # Improve distributed training stability
-                dataloader_drop_last=True,  # Prevent issues with last incomplete batch
+                callbacks=callbacks if callbacks else None
             )
-            
-            # Set memory efficient gradient checkpointing
-            self.trainer.use_amp = False  # Disable automatic mixed precision
-            if hasattr(self.trainer, "gradient_checkpointing_enable"):
-                self.trainer.gradient_checkpointing_enable()
-                
             logger.info("✅ Trainer created successfully")
-            
         except Exception as e:
             logger.error(f"❌ Failed to create trainer: {e}")
             raise
         
-        # Clear memory before training
-        clear_gpu_memory()
-        
         # Train the model
-        logger.info("\n" + "=" * 80)
-        logger.info("🚀 STARTING TRAINING")
-        logger.info("=" * 80 + "\n")
-        
+        logger.info("🚀 Starting training...")
         try:
-            # Add gradient clipping for stability
-            if hasattr(self.trainer.args, "max_grad_norm"):
-                self.trainer.args.max_grad_norm = 1.0
-            
             train_result = self.trainer.train()
-            
-            # Clear memory after training
-            clear_gpu_memory()
-            
-            logger.info("\n✅ Training completed successfully")
-            
+            logger.info("✅ Training completed successfully")
         except Exception as e:
             logger.error(f"❌ Training failed: {e}")
             raise
@@ -479,63 +321,33 @@ def setup_model_and_tokenizer(self):
         training_time = time.time() - start_time
         
         # Evaluate on validation set
-        logger.info("\n📊 Evaluating on validation set...")
+        logger.info("📊 Evaluating on validation set...")
         eval_result = self.trainer.evaluate()
         
-        # Clear memory after training
-        clear_gpu_memory()
-        
-        # Print detailed results
-        logger.info("\n" + "=" * 80)
-        logger.info("✅ TRAINING COMPLETED")
-        logger.info("=" * 80)
-        logger.info(f"\n⏱️  Training Time:")
-        logger.info(f"   Total: {training_time:.2f}s ({training_time/60:.2f}m)")
-        logger.info(f"   Per epoch: {training_time/num_epochs:.2f}s")
-        
-        logger.info(f"\n📊 Final Validation Metrics:")
+        logger.info("="*80)
+        logger.info("TRAINING COMPLETED ✅")
+        logger.info("="*80)
+        logger.info(f"⏱️  Training time: {training_time:.2f} seconds ({training_time/60:.2f} minutes)")
+        logger.info(f"📊 Final validation metrics:")
         for k, v in eval_result.items():
-            if isinstance(v, (int, float)) and not k.startswith('epoch'):
+            if isinstance(v, (int, float)):
                 logger.info(f"   {k}: {v:.4f}")
         
-        # Prepare comprehensive results
+        # Prepare results with consistent structure
         results = {
-            'model_type': 'transformer',
+            'model_type': 'bert',
             'model_name': self.model_name,
             'training_time': float(training_time),
-            'training_time_per_epoch': float(training_time / num_epochs),
-            'train_metrics': {
-                k: float(v) if isinstance(v, (int, float)) else v 
-                for k, v in train_result.metrics.items()
-            },
-            'eval_metrics': {
-                k: float(v) if isinstance(v, (int, float)) else v 
-                for k, v in eval_result.items()
-            },
-            'hyperparameters': {
-                'batch_size': batch_size,
-                'effective_batch_size': batch_size * ModelConfig.GRADIENT_ACCUMULATION_STEPS,
-                'learning_rate': learning_rate,
-                'num_epochs': num_epochs,
-                'warmup_ratio': warmup_ratio,
-                'weight_decay': weight_decay,
-                'label_smoothing': ModelConfig.LABEL_SMOOTHING_FACTOR,
-                'scheduler': ModelConfig.SCHEDULER,
-                'fp16': TrainingConfig.USE_FP16,
-                'gradient_checkpointing': TrainingConfig.GRADIENT_CHECKPOINTING
-            },
+            'train_metrics': {k: float(v) if isinstance(v, (int, float)) else v 
+                            for k, v in train_result.metrics.items()},
+            'eval_metrics': {k: float(v) if isinstance(v, (int, float)) else v 
+                           for k, v in eval_result.items()},
             'output_dir': self.output_dir,
+            'num_epochs': num_epochs,
+            'batch_size': batch_size,
+            'learning_rate': learning_rate,
             'device': str(device)
         }
-        
-        if torch.cuda.is_available():
-            results['gpu_info'] = {
-                'name': torch.cuda.get_device_name(0),
-                'memory_allocated_gb': torch.cuda.memory_allocated() / 1024**3,
-                'memory_reserved_gb': torch.cuda.memory_reserved() / 1024**3
-            }
-        
-        logger.info("=" * 80 + "\n")
         
         return results
     
@@ -550,24 +362,14 @@ def setup_model_and_tokenizer(self):
             raise ValueError("Model must be trained before saving")
         
         save_path = save_path or self.output_dir
+        
+        # Ensure directory exists
         Path(save_path).mkdir(parents=True, exist_ok=True)
         
         try:
             self.trainer.save_model(save_path)
             self.tokenizer.save_pretrained(save_path)
             logger.info(f"✅ Model and tokenizer saved to: {save_path}")
-            
-            # Save to Google Drive if in Colab
-            if self.is_colab and ColabConfig.SAVE_CHECKPOINT_TO_DRIVE:
-                try:
-                    drive_path = ColabConfig.DRIVE_CHECKPOINT_DIR
-                    Path(drive_path).mkdir(parents=True, exist_ok=True)
-                    self.trainer.save_model(drive_path)
-                    self.tokenizer.save_pretrained(drive_path)
-                    logger.info(f"✅ Model also saved to Google Drive: {drive_path}")
-                except Exception as e:
-                    logger.warning(f"⚠️  Could not save to Drive: {e}")
-                    
         except Exception as e:
             logger.error(f"❌ Failed to save model: {e}")
             raise
@@ -585,34 +387,24 @@ def setup_model_and_tokenizer(self):
         if self.trainer is None:
             raise ValueError("Model must be trained before evaluation")
         
-        logger.info("\n" + "=" * 80)
-        logger.info("📊 EVALUATING ON TEST SET")
-        logger.info("=" * 80)
+        logger.info("📊 Evaluating on test set...")
         
         try:
             test_results = self.trainer.evaluate(test_dataset)
             
-            logger.info("\n✅ Test evaluation completed!")
-            logger.info("\n📊 Test Metrics:")
+            logger.info("✅ Test evaluation completed!")
+            logger.info("📊 Test metrics:")
             for k, v in test_results.items():
-                if isinstance(v, (int, float)) and not k.startswith('epoch'):
+                if isinstance(v, (int, float)):
                     logger.info(f"   {k}: {v:.4f}")
             
-            logger.info("=" * 80 + "\n")
-            
-            return {
-                k: float(v) if isinstance(v, (int, float)) else v 
-                for k, v in test_results.items()
-            }
-            
+            # Convert to consistent format
+            return {k: float(v) if isinstance(v, (int, float)) else v 
+                   for k, v in test_results.items()}
         except Exception as e:
             logger.error(f"❌ Evaluation failed: {e}")
             raise
 
-
-# ============================================================================
-# MAIN TRAINING PIPELINE
-# ============================================================================
 
 def train_bert_model(
     train_dataset,
@@ -622,13 +414,13 @@ def train_bert_model(
     output_dir: str = None
 ) -> Dict[str, Any]:
     """
-    Complete BERT/DeBERTa training pipeline
+    Complete BERT/RoBERTa training pipeline
     
     Args:
         train_dataset: Training dataset
         val_dataset: Validation dataset
         test_dataset: Test dataset
-        model_name: Name of the transformer model
+        model_name: Name of the BERT model
         output_dir: Output directory for saving
         
     Returns:
@@ -640,14 +432,12 @@ def train_bert_model(
             "Please install: pip install transformers accelerate"
         )
     
-    logger.info("=" * 80)
-    logger.info("🚀 TRANSFORMER MODEL TRAINING PIPELINE")
-    logger.info("=" * 80)
-    logger.info(f"Model: {model_name}")
-    logger.info("=" * 80 + "\n")
+    logger.info("="*80)
+    logger.info("BERT/ROBERTA TRAINING PIPELINE")
+    logger.info("="*80)
     
     # Create trainer
-    bert_trainer = EnhancedBertTrainer(model_name=model_name, output_dir=output_dir)
+    bert_trainer = BertTrainer(model_name=model_name, output_dir=output_dir)
     
     # Train the model
     train_results = bert_trainer.train(train_dataset, val_dataset)
@@ -664,15 +454,9 @@ def train_bert_model(
         'test_metrics': test_results
     }
     
-    logger.info("=" * 80)
-    logger.info("✅ PIPELINE COMPLETED SUCCESSFULLY")
-    logger.info("=" * 80)
-    logger.info(f"\n🎯 Final Results:")
-    logger.info(f"   Test Accuracy: {test_results.get('eval_accuracy', 0):.4f}")
-    logger.info(f"   Test F1: {test_results.get('eval_f1', 0):.4f}")
-    logger.info(f"   Test Precision: {test_results.get('eval_precision', 0):.4f}")
-    logger.info(f"   Test Recall: {test_results.get('eval_recall', 0):.4f}")
-    logger.info("=" * 80 + "\n")
+    logger.info("="*80)
+    logger.info("PIPELINE COMPLETED ✅")
+    logger.info("="*80)
     
     return complete_results
 
@@ -704,6 +488,7 @@ def save_training_results(results: Dict[str, Any], filepath: str):
     
     results_serializable = convert_to_serializable(results)
     
+    # Ensure parent directory exists
     Path(filepath).parent.mkdir(parents=True, exist_ok=True)
     
     try:
@@ -720,24 +505,17 @@ def save_training_results(results: Dict[str, Any], filepath: str):
 # ============================================================================
 
 if __name__ == "__main__":
-    print("=" * 80)
-    print("TRAIN.PY MODULE - ENHANCED FOR DEBERTA-V3")
-    print("=" * 80)
+    print("="*80)
+    print("TRAIN.PY MODULE")
+    print("="*80)
     print(f"✅ TRANSFORMERS_AVAILABLE: {TRANSFORMERS_AVAILABLE}")
     print(f"✅ EARLY_STOPPING_AVAILABLE: {EARLY_STOPPING_AVAILABLE}")
     
     if TRANSFORMERS_AVAILABLE:
         print(f"✅ Transformers version: {transformers.__version__}")
-        print(f"✅ Default model: {ModelConfig.MODEL_NAME}")
-        print("\n💡 Ready to train transformer models!")
-        
-        if torch.cuda.is_available():
-            print(f"✅ GPU available: {torch.cuda.get_device_name(0)}")
-            log_gpu_memory()
-        else:
-            print("⚠️  No GPU detected, training will use CPU")
+        print("\n💡 Ready to train BERT/RoBERTa models")
     else:
         print("\n⚠️  Only baseline model training available")
-        print("💡 Install: pip install transformers accelerate")
+        print("💡 Install transformers: pip install transformers accelerate")
     
-    print("=" * 80)
+    print("="*80)
