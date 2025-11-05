@@ -177,7 +177,7 @@ class TrainingConfig:
     PREFETCH_FACTOR = 2  # Prefetch 2 batches
 
     # ✨ NEW: Memory optimization
-    GRADIENT_CHECKPOINTING = True  # Trade compute for memory
+    GRADIENT_CHECKPOINTING = False  # Disable gradient checkpointing for stability
     OPTIM = "adamw_torch"  # Use PyTorch's AdamW (faster on GPU)
 
 
