@@ -251,6 +251,9 @@ def setup_model_and_tokenizer(self):
     logger.info(f"📥 Loading {self.model_name}...")
 
     try:
+        # Clear GPU cache before loading
+        clear_gpu_memory()
+        
         # Load tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
 
@@ -260,6 +263,7 @@ def setup_model_and_tokenizer(self):
             num_labels=ModelConfig.NUM_LABELS,
             hidden_dropout_prob=ModelConfig.DROPOUT_RATE,
             attention_probs_dropout_prob=ModelConfig.DROPOUT_RATE,
+            gradient_checkpointing=False  # Disable gradient checkpointing
         )
 
         # 🚫 Tắt gradient checkpointing triệt để để tránh lỗi backward graph
@@ -267,12 +271,20 @@ def setup_model_and_tokenizer(self):
             self.model.gradient_checkpointing_disable()
         if hasattr(self.model.config, "gradient_checkpointing"):
             self.model.config.gradient_checkpointing = False
+        
+        # Đảm bảo model ở chế độ train và clear memory
+        self.model.train()
+        clear_gpu_memory()
+        
         logger.info("🧠 Gradient checkpointing disabled (for stability)")
-
-        # Log tình trạng GPU
         logger.info("✅ Model and tokenizer loaded successfully")
-        log_gpu_memory()
-
+        
+        # Log GPU memory usage
+        if torch.cuda.is_available():
+            logger.info(f"💾 GPU Memory Status:")
+            logger.info(f"   Allocated: {torch.cuda.memory_allocated()/1024**2:.1f}MB")
+            logger.info(f"   Reserved:  {torch.cuda.memory_reserved()/1024**2:.1f}MB")
+            
     except Exception as e:
         logger.error(f"❌ Failed to load model: {e}")
         raise
@@ -408,16 +420,28 @@ def setup_model_and_tokenizer(self):
             callbacks.append(MemoryCallback(ColabConfig.CLEAR_CACHE_EVERY_N_STEPS))
             logger.info(f"✅ Memory management enabled (clear every {ColabConfig.CLEAR_CACHE_EVERY_N_STEPS} steps)")
         
-        # Create trainer
+        # Create trainer with additional settings for stability
         try:
+            # Clear memory before creating trainer
+            clear_gpu_memory()
+            
             self.trainer = Trainer(
                 model=self.model,
                 args=training_args,
                 train_dataset=train_dataset,
                 eval_dataset=val_dataset,
                 compute_metrics=compute_metrics,
-                callbacks=callbacks if callbacks else None
+                callbacks=callbacks if callbacks else None,
+                # Add additional settings for stability
+                ddp_find_unused_parameters=False,  # Improve distributed training stability
+                dataloader_drop_last=True,  # Prevent issues with last incomplete batch
             )
+            
+            # Set memory efficient gradient checkpointing
+            self.trainer.use_amp = False  # Disable automatic mixed precision
+            if hasattr(self.trainer, "gradient_checkpointing_enable"):
+                self.trainer.gradient_checkpointing_enable()
+                
             logger.info("✅ Trainer created successfully")
             
         except Exception as e:
@@ -433,7 +457,15 @@ def setup_model_and_tokenizer(self):
         logger.info("=" * 80 + "\n")
         
         try:
+            # Add gradient clipping for stability
+            if hasattr(self.trainer.args, "max_grad_norm"):
+                self.trainer.args.max_grad_norm = 1.0
+            
             train_result = self.trainer.train()
+            
+            # Clear memory after training
+            clear_gpu_memory()
+            
             logger.info("\n✅ Training completed successfully")
             
         except Exception as e:
