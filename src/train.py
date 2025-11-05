@@ -370,13 +370,18 @@ def setup_model_and_tokenizer(self):
             # Learning rate scheduler
             lr_scheduler_type=ModelConfig.SCHEDULER,
             
-            # Mixed precision
-            fp16=TrainingConfig.USE_FP16 and torch.cuda.is_available(),
-            fp16_opt_level=TrainingConfig.FP16_OPT_LEVEL if TrainingConfig.USE_FP16 else "O0",
+            # Mixed precision and memory settings
+            fp16=False,  # Disable mixed precision
+            fp16_opt_level="O0",
+            gradient_checkpointing=False,  # Explicitly disable gradient checkpointing
             
             # Evaluation
-            eval_strategy="epoch",
+            evaluation_strategy="epoch",
             eval_accumulation_steps=10,  # Save memory during evaluation
+            
+            # Memory optimization
+            max_grad_norm=1.0,  # Add gradient clipping
+            gradient_accumulation_steps=ModelConfig.GRADIENT_ACCUMULATION_STEPS,
             
             # Saving
             save_strategy="epoch",
