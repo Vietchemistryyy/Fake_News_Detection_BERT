@@ -110,7 +110,7 @@ class ModelConfig:
     DROPOUT_RATE = 0.1  # DeBERTa's default dropout
     
     # ✨ NEW: Label smoothing (reduces overfitting)
-    LABEL_SMOOTHING_FACTOR = 0.1
+    LABEL_SMOOTHING_FACTOR = 0.0
     
     # Optimizer
     OPTIMIZER = "adamw"
