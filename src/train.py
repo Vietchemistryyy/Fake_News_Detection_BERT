@@ -246,33 +246,37 @@ class EnhancedBertTrainer:
         logger.info(f"   Output: {self.output_dir}")
         logger.info(f"   Environment: {'Google Colab' if self.is_colab else 'Local'}")
         
-    def setup_model_and_tokenizer(self):
-        """Setup model and tokenizer with optimizations"""
-        logger.info(f"📥 Loading {self.model_name}...")
-        
-        try:
-            # Load tokenizer
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-            
-            # Load model with optimizations
-            self.model = AutoModelForSequenceClassification.from_pretrained(
-                self.model_name,
-                num_labels=ModelConfig.NUM_LABELS,
-                hidden_dropout_prob=ModelConfig.DROPOUT_RATE,
-                attention_probs_dropout_prob=ModelConfig.DROPOUT_RATE,
-            )
-            
-            # Enable gradient checkpointing for memory efficiency
-            if TrainingConfig.GRADIENT_CHECKPOINTING:
-                self.model.gradient_checkpointing_enable()
-                logger.info("✅ Gradient checkpointing enabled")
-            
-            logger.info("✅ Model and tokenizer loaded successfully")
-            log_gpu_memory()
-            
-        except Exception as e:
-            logger.error(f"❌ Failed to load model: {e}")
-            raise
+def setup_model_and_tokenizer(self):
+    """Setup model and tokenizer with optimizations"""
+    logger.info(f"📥 Loading {self.model_name}...")
+
+    try:
+        # Load tokenizer
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+
+        # Load model with optimizations
+        self.model = AutoModelForSequenceClassification.from_pretrained(
+            self.model_name,
+            num_labels=ModelConfig.NUM_LABELS,
+            hidden_dropout_prob=ModelConfig.DROPOUT_RATE,
+            attention_probs_dropout_prob=ModelConfig.DROPOUT_RATE,
+        )
+
+        # 🚫 Tắt gradient checkpointing triệt để để tránh lỗi backward graph
+        if hasattr(self.model, "gradient_checkpointing_disable"):
+            self.model.gradient_checkpointing_disable()
+        if hasattr(self.model.config, "gradient_checkpointing"):
+            self.model.config.gradient_checkpointing = False
+        logger.info("🧠 Gradient checkpointing disabled (for stability)")
+
+        # Log tình trạng GPU
+        logger.info("✅ Model and tokenizer loaded successfully")
+        log_gpu_memory()
+
+    except Exception as e:
+        logger.error(f"❌ Failed to load model: {e}")
+        raise
+
     
     def train(
         self,
