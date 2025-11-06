@@ -310,6 +310,20 @@ def set_seed(seed: int = 42):
 
     print(f"Random seed set to: {seed}")
 
+def get_model_save_path(model_type: str, model_name: str = "model") -> Path:
+    """Get standardized save path for models"""
+    from src.config import MODELS_DIR
+    
+    if model_type == "baseline":
+        return MODELS_DIR / "baseline" / f"{model_name}.pkl"
+    else:
+        return MODELS_DIR / model_type
+
+def get_metrics_save_path(model_type: str, metrics_name: str = "metrics") -> Path:
+    """Get standardized save path for metrics"""
+    from src.config import METRICS_DIR
+    
+    return METRICS_DIR / model_type / f"{metrics_name}.json"
 
 # ============================================================================
 # MAIN

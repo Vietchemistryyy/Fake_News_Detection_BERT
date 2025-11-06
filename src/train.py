@@ -51,7 +51,23 @@ except ImportError as e:
 try:
     from .config import ModelConfig, TrainingConfig, METRICS_DIR
     from .model import BaselineModel
-    from .evaluate import compute_metrics
+    # from .evaluate import compute_metrics
+    def compute_metrics_for_trainer(eval_pred):
+        """
+        Compute metrics for Hugging Face Trainer
+        """
+        from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+        import numpy as np
+        
+        predictions, labels = eval_pred
+        predictions = np.argmax(predictions, axis=1)
+        
+        return {
+            'accuracy': accuracy_score(labels, predictions),
+            'precision': precision_score(labels, predictions, average='weighted', zero_division=0),
+            'recall': recall_score(labels, predictions, average='weighted', zero_division=0),
+            'f1': f1_score(labels, predictions, average='weighted', zero_division=0)
+        }
 except ImportError:
     # Fallback for when running the file directly
     import sys
@@ -303,7 +319,7 @@ class BertTrainer:
                 args=training_args,
                 train_dataset=train_dataset,
                 eval_dataset=val_dataset,
-                compute_metrics=compute_metrics,
+                compute_metrics=compute_metrics_for_trainer,
                 callbacks=callbacks if callbacks else None
             )
             logger.info("✅ Trainer created successfully")
