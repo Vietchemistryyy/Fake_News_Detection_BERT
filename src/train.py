@@ -1,6 +1,6 @@
 """
 Training functions for Fake News Detection models
-Includes training for both baseline and BERT models
+Includes training for both baseline and BERT/RoBERTa models
 """
 
 import torch
@@ -20,16 +20,11 @@ try:
     from transformers import (
         TrainingArguments,
         AutoTokenizer,
-        AutoModelForSequenceClassification
+        AutoModelForSequenceClassification,
+        Trainer
     )
     
-    # Try to import Trainer with fallback
-    try:
-        from transformers import Trainer
-    except ImportError:
-        from transformers.trainer import Trainer
-    
-    # Try to import EarlyStoppingCallback with fallback - MAKE IT OPTIONAL
+    # Try to import EarlyStoppingCallback - MAKE IT OPTIONAL
     try:
         from transformers import EarlyStoppingCallback
         EARLY_STOPPING_AVAILABLE = True
@@ -179,6 +174,7 @@ def train_baseline_model(
 class BertTrainer:
     """
     Custom BERT/RoBERTa trainer class with unified interface
+    Compatible with all transformer models (RoBERTa, BERT, DistilBERT, etc.)
     """
     
     def __init__(
@@ -193,7 +189,7 @@ class BertTrainer:
             )
         
         self.model_name = model_name
-        self.output_dir = output_dir or "results/models/bert"
+        self.output_dir = output_dir or "results/models/roberta"
         self.model = None
         self.tokenizer = None
         self.trainer = None
@@ -203,7 +199,7 @@ class BertTrainer:
         
     def setup_model_and_tokenizer(self):
         """
-        Setup model and tokenizer
+        Setup model and tokenizer using Auto classes
         """
         logger.info(f"📥 Loading {self.model_name}...")
         
@@ -214,6 +210,8 @@ class BertTrainer:
                 num_labels=ModelConfig.NUM_LABELS
             )
             logger.info("✅ Model and tokenizer loaded successfully")
+            logger.info(f"   Model type: {type(self.model).__name__}")
+            logger.info(f"   Tokenizer type: {type(self.tokenizer).__name__}")
         except Exception as e:
             logger.error(f"❌ Failed to load model: {e}")
             raise
@@ -261,7 +259,7 @@ class BertTrainer:
         logger.info(f"⚙️  Learning rate: {learning_rate}")
         logger.info(f"⚙️  Epochs: {num_epochs}")
         
-        # Training arguments
+        # Training arguments - FIXED: eval_strategy instead of evaluation_strategy
         training_args = TrainingArguments(
             output_dir=self.output_dir,
             num_train_epochs=num_epochs,
@@ -272,7 +270,7 @@ class BertTrainer:
             learning_rate=learning_rate,
             logging_dir=f"{self.output_dir}/logs",
             logging_steps=100,
-            eval_strategy="epoch",  # Changed from evaluation_strategy
+            eval_strategy="epoch",  # ✅ FIXED: Changed from evaluation_strategy
             save_strategy="epoch",
             load_best_model_at_end=True,
             metric_for_best_model="f1",
@@ -289,8 +287,12 @@ class BertTrainer:
         # Prepare callbacks
         callbacks = []
         if EARLY_STOPPING_AVAILABLE:
-            callbacks.append(EarlyStoppingCallback(early_stopping_patience=3))
-            logger.info("✅ Early stopping enabled (patience=3)")
+            callbacks.append(
+                EarlyStoppingCallback(
+                    early_stopping_patience=ModelConfig.EARLY_STOPPING_PATIENCE
+                )
+            )
+            logger.info(f"✅ Early stopping enabled (patience={ModelConfig.EARLY_STOPPING_PATIENCE})")
         else:
             logger.warning("⚠️  Early stopping not available - training all epochs")
         
@@ -335,7 +337,7 @@ class BertTrainer:
         
         # Prepare results with consistent structure
         results = {
-            'model_type': 'bert',
+            'model_type': 'transformer',
             'model_name': self.model_name,
             'training_time': float(training_time),
             'train_metrics': {k: float(v) if isinstance(v, (int, float)) else v 
@@ -420,7 +422,7 @@ def train_bert_model(
         train_dataset: Training dataset
         val_dataset: Validation dataset
         test_dataset: Test dataset
-        model_name: Name of the BERT model
+        model_name: Name of the transformer model
         output_dir: Output directory for saving
         
     Returns:
@@ -506,16 +508,26 @@ def save_training_results(results: Dict[str, Any], filepath: str):
 
 if __name__ == "__main__":
     print("="*80)
-    print("TRAIN.PY MODULE")
+    print("TRAIN.PY MODULE TEST")
     print("="*80)
-    print(f"✅ TRANSFORMERS_AVAILABLE: {TRANSFORMERS_AVAILABLE}")
+    print(f"\n✅ TRANSFORMERS_AVAILABLE: {TRANSFORMERS_AVAILABLE}")
     print(f"✅ EARLY_STOPPING_AVAILABLE: {EARLY_STOPPING_AVAILABLE}")
     
     if TRANSFORMERS_AVAILABLE:
         print(f"✅ Transformers version: {transformers.__version__}")
+        print(f"✅ Default model: {ModelConfig.MODEL_NAME}")
         print("\n💡 Ready to train BERT/RoBERTa models")
+        
+        # Test model loading
+        print(f"\n🧪 Testing model loading:")
+        try:
+            trainer = BertTrainer(model_name=ModelConfig.MODEL_NAME)
+            trainer.setup_model_and_tokenizer()
+            print(f"   ✅ Model loaded successfully")
+        except Exception as e:
+            print(f"   ❌ Model loading failed: {e}")
     else:
         print("\n⚠️  Only baseline model training available")
         print("💡 Install transformers: pip install transformers accelerate")
     
-    print("="*80)
+    print("\n" + "="*80)
