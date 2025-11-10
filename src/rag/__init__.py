@@ -1,13 +1,147 @@
-"""RAG package exports
-
-Exports the KnowledgeBaseFAISS and RAGClassifier for convenient import.
-
-Example:
-    from src.rag import KnowledgeBaseFAISS, RAGClassifier
-
+"""
+Fake News Detection - Source Package
+Centralized imports for easy access to all modules
 """
 
-from src.rag.knowledge_base import KnowledgeBaseFAISS
-from src.rag.rag_classifier import RAGClassifier
+__version__ = "1.0.0"
+__author__ = "Fake News Detection Team"
 
-__all__ = ["KnowledgeBaseFAISS", "RAGClassifier"]
+# Import main classes and functions for easy access
+try:
+    # Configuration
+    from .config import (
+        DataConfig, 
+        ModelConfig, 
+        TrainingConfig,
+        BaselineConfig,
+        EvaluationConfig,
+        APIConfig
+    )
+    
+    # Models
+    from .model import (
+        BaselineModel,
+        BertClassifier,
+        BertForSequenceClassification,
+        create_baseline_model,
+        create_bert_model,
+        create_model
+    )
+    
+    # Training
+    from .train import (
+        train_baseline_model,
+        train_bert_model,
+        BertTrainer,
+        save_training_results
+    )
+    
+    # Evaluation
+    from .evaluate import (
+        evaluate_model,
+        compute_metrics,
+        compute_extended_metrics,
+        plot_confusion_matrix,
+        plot_roc_curve,
+        plot_precision_recall_curve,
+        compare_models,
+        save_evaluation_results,
+        create_evaluation_report
+    )
+    
+    # Dataset
+    from .dataset import (
+        FakeNewsDataset,
+        create_dataset_from_dataframe,
+        create_data_loaders,
+        get_sample_batch
+    )
+    
+    # Preprocessing
+    from .preprocessing import (
+        preprocess_pipeline,
+        TextPreprocessor,
+        load_raw_data,
+        split_data,
+        check_data_quality
+    )
+    
+    # Utils
+    from .utils import (
+        setup_logger,
+        Timer,
+        set_seed,
+        save_json,
+        load_json,
+        save_csv,
+        load_csv,
+        get_data_statistics,
+        print_statistics
+    )
+    
+    # ============================================================================
+    # RAG MODULES (NEW)
+    # ============================================================================
+    try:
+        from .rag import KnowledgeBaseFAISS, RAGClassifier
+        RAG_AVAILABLE = True
+        print("✅ RAG modules loaded successfully")
+    except ImportError as e:
+        RAG_AVAILABLE = False
+        print(f"⚠️  RAG modules not available: {e}")
+        print("💡 Install: pip install sentence-transformers faiss-cpu")
+    
+    print("✅ Fake News Detection package loaded successfully")
+    
+except ImportError as e:
+    print(f"⚠️  Warning: Some imports failed: {e}")
+    print("💡 Some features may not be available")
+    RAG_AVAILABLE = False
+
+
+# Define what gets exported when using "from src import *"
+__all__ = [
+    # Config
+    'DataConfig',
+    'ModelConfig', 
+    'TrainingConfig',
+    'BaselineConfig',
+    
+    # Models
+    'BaselineModel',
+    'BertClassifier',
+    'BertForSequenceClassification',
+    'create_baseline_model',
+    'create_bert_model',
+    'create_model',
+    
+    # Training
+    'train_baseline_model',
+    'train_bert_model',
+    'BertTrainer',
+    
+    # Evaluation
+    'evaluate_model',
+    'compute_metrics',
+    'plot_confusion_matrix',
+    'plot_roc_curve',
+    'compare_models',
+    
+    # Dataset
+    'FakeNewsDataset',
+    'create_dataset_from_dataframe',
+    'create_data_loaders',
+    
+    # Preprocessing
+    'preprocess_pipeline',
+    'TextPreprocessor',
+    
+    # Utils
+    'setup_logger',
+    'Timer',
+    'set_seed',
+]
+
+# Add RAG to __all__ if available
+if RAG_AVAILABLE:
+    __all__.extend(['KnowledgeBaseFAISS', 'RAGClassifier'])
