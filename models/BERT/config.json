@@ -17,6 +17,15 @@
   "model_type": "roberta",
   "num_attention_heads": 12,
   "num_hidden_layers": 12,
+  "num_labels": 2,
+  "id2label": {
+    "0": "real",
+    "1": "fake"
+  },
+  "label2id": {
+    "real": 0,
+    "fake": 1
+  },
   "pad_token_id": 1,
   "position_embedding_type": "absolute",
   "problem_type": "single_label_classification",
