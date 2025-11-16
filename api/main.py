@@ -1,13 +1,38 @@
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer
 from pydantic import BaseModel
 from typing import Optional, List
 import config
 from model_loader import ModelLoader
 from openai_verifier import OpenAIVerifier
 from utils import clean_text, setup_logging
+from database import db
+import auth
+from middleware import get_current_user, get_current_user_optional
+from models_pydantic import (
+    UserRegister, UserLogin, Token,
+    PredictRequest, PredictResponse,
+    QueryHistoryResponse, QueryStatsResponse,
+    HealthResponse
+)
+
+# Import new verifiers
+try:
+    from gemini_verifier import GeminiVerifier
+    GEMINI_AVAILABLE = True
+except ImportError:
+    GEMINI_AVAILABLE = False
+    GeminiVerifier = None
+
+try:
+    from groq_verifier import GroqVerifier
+    GROQ_AVAILABLE = True
+except ImportError:
+    GROQ_AVAILABLE = False
+    GroqVerifier = None
 
 # Setup logging
 setup_logging()
@@ -16,29 +41,72 @@ logger = logging.getLogger(__name__)
 # Global model and verifier instances
 model_loader: Optional[ModelLoader] = None
 openai_verifier: Optional[OpenAIVerifier] = None
+gemini_verifier: Optional[GeminiVerifier] = None
+groq_verifier: Optional[GroqVerifier] = None
+active_verifier = None  # Will be set to the first available verifier
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage model loading on startup."""
-    global model_loader, openai_verifier
+    global model_loader, openai_verifier, gemini_verifier, groq_verifier, active_verifier
     
-    logger.info("Loading BERT model...")
+    # Connect to MongoDB
+    logger.info("Connecting to MongoDB...")
+    db.connect()
+    
+    # Load models
+    logger.info("Loading models...")
     model_loader = ModelLoader()
-    if not model_loader.load_model():
-        logger.error("Failed to load BERT model")
-        raise RuntimeError("Failed to load BERT model")
     
-    logger.info("Initializing OpenAI verifier...")
+    # Load English model (required)
+    if not model_loader.load_model_en():
+        logger.error("Failed to load English model")
+        raise RuntimeError("Failed to load English model")
+    
+    # Load Vietnamese model (optional)
+    try:
+        model_loader.load_model_vi()
+    except Exception as e:
+        logger.warning(f"Vietnamese model not loaded: {e}")
+        logger.warning("Vietnamese predictions will not be available")
+    
+    # Initialize verifiers based on config
+    logger.info("Initializing AI verifiers...")
+    
+    # Gemini (recommended, free)
+    if GEMINI_AVAILABLE and GeminiVerifier:
+        gemini_verifier = GeminiVerifier()
+        if gemini_verifier.enabled:
+            logger.info("✓ Gemini verifier enabled (FREE)")
+            if not active_verifier:
+                active_verifier = gemini_verifier
+    
+    # Groq (fast, free)
+    if GROQ_AVAILABLE and GroqVerifier:
+        groq_verifier = GroqVerifier()
+        if groq_verifier.enabled:
+            logger.info("✓ Groq verifier enabled (FREE)")
+            if not active_verifier:
+                active_verifier = groq_verifier
+    
+    # OpenAI (paid)
     openai_verifier = OpenAIVerifier()
     if openai_verifier.enabled:
-        logger.info("OpenAI verifier enabled")
+        logger.info("✓ OpenAI verifier enabled")
+        if not active_verifier:
+            active_verifier = openai_verifier
+    
+    if not active_verifier:
+        logger.warning("⚠ No AI verifier enabled - only BERT will be used")
     else:
-        logger.warning("OpenAI verifier disabled or API key not set")
+        logger.info(f"✓ Active verifier: {active_verifier.__class__.__name__}")
     
     logger.info("✓ API startup complete")
     
     yield
     
+    # Cleanup
+    db.disconnect()
     logger.info("Shutting down API...")
 
 # Create FastAPI app
@@ -58,47 +126,52 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ==================== Pydantic Models ====================
-
-class PredictRequest(BaseModel):
-    text: str
-    verify_with_openai: bool = False
-    mc_dropout: bool = False
-
-class PredictResponse(BaseModel):
-    label: str
-    confidence: float
-    probabilities: dict
-    openai_result: Optional[dict] = None
-    combined_result: Optional[dict] = None
+# ==================== Pydantic Models (Legacy - keeping for compatibility) ====================
 
 class BatchPredictRequest(BaseModel):
     texts: List[str]
+    language: str = "en"
     verify_with_openai: bool = False
-
-class HealthResponse(BaseModel):
-    status: str
-    model_loaded: bool
-    openai_available: bool
-    message: str
 
 # ==================== Endpoints ====================
 
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
     """Health check endpoint."""
+    ai_available = False
+    if active_verifier:
+        ai_available = active_verifier.enabled
+    
     return HealthResponse(
         status="ok" if model_loader else "error",
-        model_loaded=model_loader is not None,
-        openai_available=openai_verifier.enabled if openai_verifier else False,
+        models_loaded=model_loader.models_loaded if model_loader else {"en": False, "vi": False},
+        ai_verification_available=ai_available,
+        database_connected=db.connected,
         message="API is running"
     )
 
 @app.post("/predict", response_model=PredictResponse)
-async def predict(request: PredictRequest):
-    """Predict if news is real or fake."""
+async def predict(
+    request: PredictRequest,
+    current_user: dict = Depends(get_current_user_optional)
+):
+    """Predict if news is real or fake (with language support)."""
     if not model_loader:
         raise HTTPException(status_code=503, detail="Model not loaded")
+    
+    # Validate language
+    if request.language not in config.SUPPORTED_LANGUAGES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported language: {request.language}. Supported: {config.SUPPORTED_LANGUAGES}"
+        )
+    
+    # Check if model for language is loaded
+    if not model_loader.models_loaded.get(request.language):
+        raise HTTPException(
+            status_code=503,
+            detail=f"Model for language '{request.language}' not loaded"
+        )
     
     # Validate input
     text = clean_text(request.text)
@@ -114,29 +187,55 @@ async def predict(request: PredictRequest):
         )
     
     try:
-        # BERT prediction
+        # BERT prediction with language support
         bert_result = model_loader.predict(
             text,
+            language=request.language,
             mc_dropout=request.mc_dropout
         )
         
-        openai_result = None
+        ai_result = None
         combined_result = None
         
-        # OpenAI verification if requested
-        if request.verify_with_openai and openai_verifier:
-            logger.info("Performing OpenAI verification...")
-            openai_result = openai_verifier.verify_news(text)
+        # AI verification if requested
+        if request.verify_with_ai and active_verifier:
+            verifier_name = active_verifier.__class__.__name__
+            logger.info(f"Performing AI verification with {verifier_name}...")
+            ai_result = active_verifier.verify_news(text)
             
             # Combine results
-            if openai_result.get("is_available"):
-                combined_result = OpenAIVerifier.combine_verdicts(bert_result, openai_result)
+            if ai_result.get("is_available"):
+                if hasattr(active_verifier, 'combine_verdicts'):
+                    combined_result = active_verifier.combine_verdicts(bert_result, ai_result)
+                else:
+                    combined_result = OpenAIVerifier.combine_verdicts(bert_result, ai_result)
+        
+        # Save to database if user is logged in
+        if current_user and db.connected:
+            try:
+                db.save_query(
+                    user_id=current_user["_id"],
+                    text=text,
+                    language=request.language,
+                    prediction={
+                        "label": bert_result["label"],
+                        "confidence": bert_result["confidence"],
+                        "probabilities": bert_result["probabilities"],
+                        "openai_result": ai_result,
+                        "combined_result": combined_result,
+                        "mc_dropout": request.mc_dropout
+                    }
+                )
+                logger.info(f"Query saved for user: {current_user['username']}")
+            except Exception as e:
+                logger.error(f"Failed to save query: {e}")
         
         return PredictResponse(
             label=bert_result["label"],
             confidence=bert_result["confidence"],
             probabilities=bert_result["probabilities"],
-            openai_result=openai_result,
+            language=request.language,
+            openai_result=ai_result,
             combined_result=combined_result
         )
         
@@ -209,16 +308,133 @@ async def get_model_info():
         raise HTTPException(status_code=503, detail="Model not loaded")
     
     return {
-        "model_name": config.MODEL_NAME,
-        "model_path": config.MODEL_PATH,
+        "models_loaded": model_loader.models_loaded,
+        "supported_languages": config.SUPPORTED_LANGUAGES,
         "device": str(model_loader.device),
         "labels": model_loader.labels,
         "max_length": config.MAX_LENGTH,
         "temperature": config.TEMPERATURE,
         "mc_dropout_enabled": config.MC_DROPOUT_ENABLED,
         "mc_dropout_iterations": config.MC_DROPOUT_ITERATIONS,
-        "openai_available": openai_verifier.enabled if openai_verifier else False
+        "ai_verification_available": active_verifier is not None,
+        "database_connected": db.connected
     }
+
+# ==================== Authentication Endpoints ====================
+
+@app.post("/auth/register", response_model=Token)
+async def register(user_data: UserRegister):
+    """Register new user"""
+    if not db.connected:
+        raise HTTPException(status_code=503, detail="Database not available")
+    
+    # Validate
+    valid, msg = auth.validate_username(user_data.username)
+    if not valid:
+        raise HTTPException(status_code=400, detail=msg)
+    
+    valid, msg = auth.validate_email(user_data.email)
+    if not valid:
+        raise HTTPException(status_code=400, detail=msg)
+    
+    valid, msg = auth.validate_password(user_data.password)
+    if not valid:
+        raise HTTPException(status_code=400, detail=msg)
+    
+    # Check if exists
+    if db.get_user_by_username(user_data.username):
+        raise HTTPException(status_code=400, detail="Username already exists")
+    
+    if db.get_user_by_email(user_data.email):
+        raise HTTPException(status_code=400, detail="Email already exists")
+    
+    # Create user
+    password_hash = auth.hash_password(user_data.password)
+    user_id = db.create_user(user_data.username, user_data.email, password_hash)
+    
+    if not user_id:
+        raise HTTPException(status_code=500, detail="Failed to create user")
+    
+    # Generate token
+    access_token = auth.create_access_token(data={"sub": user_data.username})
+    
+    user = db.get_user_by_username(user_data.username)
+    
+    return Token(
+        access_token=access_token,
+        user={
+            "username": user["username"],
+            "email": user["email"],
+            "created_at": user["created_at"].isoformat() if user.get("created_at") else None
+        }
+    )
+
+@app.post("/auth/login", response_model=Token)
+async def login(credentials: UserLogin):
+    """Login user"""
+    if not db.connected:
+        raise HTTPException(status_code=503, detail="Database not available")
+    
+    user = db.get_user_by_username(credentials.username)
+    
+    if not user or not auth.verify_password(credentials.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    # Update last login
+    db.update_last_login(credentials.username)
+    
+    # Generate token
+    access_token = auth.create_access_token(data={"sub": credentials.username})
+    
+    return Token(
+        access_token=access_token,
+        user={
+            "username": user["username"],
+            "email": user["email"],
+            "created_at": user["created_at"].isoformat() if user.get("created_at") else None
+        }
+    )
+
+@app.get("/auth/me")
+async def get_me(current_user: dict = Depends(get_current_user)):
+    """Get current user"""
+    return {
+        "username": current_user["username"],
+        "email": current_user["email"],
+        "created_at": current_user["created_at"].isoformat() if current_user.get("created_at") else None,
+        "last_login": current_user["last_login"].isoformat() if current_user.get("last_login") else None
+    }
+
+# ==================== Query History Endpoints ====================
+
+@app.get("/history", response_model=QueryHistoryResponse)
+async def get_history(
+    limit: int = 50,
+    skip: int = 0,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get user's query history"""
+    if not db.connected:
+        raise HTTPException(status_code=503, detail="Database not available")
+    
+    queries = db.get_user_queries(current_user["_id"], limit, skip)
+    total = db.queries.count_documents({"user_id": current_user["_id"]})
+    
+    return QueryHistoryResponse(
+        queries=queries,
+        total=total,
+        page=skip // limit + 1 if limit > 0 else 1,
+        limit=limit
+    )
+
+@app.get("/history/stats", response_model=QueryStatsResponse)
+async def get_stats(current_user: dict = Depends(get_current_user)):
+    """Get user's query statistics"""
+    if not db.connected:
+        raise HTTPException(status_code=503, detail="Database not available")
+    
+    stats = db.get_query_stats(current_user["_id"])
+    return QueryStatsResponse(**stats)
 
 if __name__ == "__main__":
     import uvicorn
