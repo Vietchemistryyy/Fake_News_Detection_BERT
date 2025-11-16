@@ -76,12 +76,19 @@ export default function Home() {
             </div>
           </div>
 
-          {/* CTA Button */}
-          <Link href="/detector">
-            <button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-4 px-6 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all text-lg">
-              Start Detection →
-            </button>
-          </Link>
+          {/* CTA Buttons */}
+          <div className="space-y-4">
+            <Link href="/login">
+              <button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-4 px-6 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all text-lg">
+                Login to Start →
+              </button>
+            </Link>
+            <Link href="/register">
+              <button className="w-full bg-gradient-to-r from-gray-600 to-gray-700 text-white font-bold py-4 px-6 rounded-lg hover:from-gray-700 hover:to-gray-800 transition-all text-lg">
+                Create Account
+              </button>
+            </Link>
+          </div>
 
           {/* Info */}
           <div className="mt-8 pt-8 border-t border-gray-200">
