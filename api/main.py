@@ -2,7 +2,7 @@ import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from typing import Optional, List
 import config
@@ -11,7 +11,7 @@ from openai_verifier import OpenAIVerifier
 from utils import clean_text, setup_logging
 from database import db
 import auth
-from middleware import get_current_user, get_current_user_optional
+from middleware import get_current_user, get_current_user_optional, get_current_admin, security
 from models_pydantic import (
     UserRegister, UserLogin, Token,
     PredictRequest, PredictResponse,
@@ -53,6 +53,12 @@ async def lifespan(app: FastAPI):
     # Connect to MongoDB
     logger.info("Connecting to MongoDB...")
     db.connect()
+    
+    # Create default admin user
+    if db.connected:
+        admin_password_hash = auth.hash_password("123456")
+        db.create_admin_user("admin", "admin@fakenews.com", admin_password_hash)
+        logger.info("✓ Admin user initialized")
     
     # Load models
     logger.info("Loading models...")
@@ -211,24 +217,35 @@ async def predict(
                     combined_result = OpenAIVerifier.combine_verdicts(bert_result, ai_result)
         
         # Save to database if user is logged in
-        if current_user and db.connected:
-            try:
-                db.save_query(
-                    user_id=current_user["_id"],
-                    text=text,
-                    language=request.language,
-                    prediction={
-                        "label": bert_result["label"],
-                        "confidence": bert_result["confidence"],
-                        "probabilities": bert_result["probabilities"],
-                        "openai_result": ai_result,
-                        "combined_result": combined_result,
-                        "mc_dropout": request.mc_dropout
-                    }
-                )
-                logger.info(f"Query saved for user: {current_user['username']}")
-            except Exception as e:
-                logger.error(f"Failed to save query: {e}")
+        if current_user:
+            logger.info(f"User authenticated: {current_user.get('username')}")
+            if db.connected:
+                try:
+                    query_id = db.save_query(
+                        user_id=current_user["_id"],
+                        text=text,
+                        language=request.language,
+                        prediction={
+                            "label": bert_result["label"],
+                            "confidence": bert_result["confidence"],
+                            "probabilities": bert_result["probabilities"],
+                            "openai_result": ai_result,
+                            "combined_result": combined_result,
+                            "mc_dropout": request.mc_dropout
+                        }
+                    )
+                    if query_id:
+                        logger.info(f"✓ Query saved for user: {current_user['username']} (ID: {query_id})")
+                    else:
+                        logger.error(f"✗ Failed to save query - save_query returned None")
+                except Exception as e:
+                    logger.error(f"✗ Failed to save query: {e}")
+                    import traceback
+                    logger.error(traceback.format_exc())
+            else:
+                logger.warning(f"⚠ Database not connected - query not saved")
+        else:
+            logger.info("ℹ No user authenticated - query not saved")
         
         return PredictResponse(
             label=bert_result["label"],
@@ -391,6 +408,7 @@ async def login(credentials: UserLogin):
         user={
             "username": user["username"],
             "email": user["email"],
+            "role": user.get("role", "user"),
             "created_at": user["created_at"].isoformat() if user.get("created_at") else None
         }
     )
@@ -407,34 +425,202 @@ async def get_me(current_user: dict = Depends(get_current_user)):
 
 # ==================== Query History Endpoints ====================
 
-@app.get("/history", response_model=QueryHistoryResponse)
+@app.get("/history")
 async def get_history(
     limit: int = 50,
     skip: int = 0,
-    current_user: dict = Depends(get_current_user)
+    credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
     """Get user's query history"""
     if not db.connected:
         raise HTTPException(status_code=503, detail="Database not available")
     
+    # Get current user
+    current_user = await get_current_user(credentials)
+    
     queries = db.get_user_queries(current_user["_id"], limit, skip)
     total = db.queries.count_documents({"user_id": current_user["_id"]})
     
-    return QueryHistoryResponse(
-        queries=queries,
-        total=total,
-        page=skip // limit + 1 if limit > 0 else 1,
-        limit=limit
-    )
+    return {
+        "queries": queries,
+        "total": total,
+        "page": skip // limit + 1 if limit > 0 else 1,
+        "limit": limit
+    }
 
-@app.get("/history/stats", response_model=QueryStatsResponse)
-async def get_stats(current_user: dict = Depends(get_current_user)):
+@app.get("/history/stats")
+async def get_stats(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """Get user's query statistics"""
     if not db.connected:
         raise HTTPException(status_code=503, detail="Database not available")
     
+    # Get current user
+    current_user = await get_current_user(credentials)
+    
     stats = db.get_query_stats(current_user["_id"])
-    return QueryStatsResponse(**stats)
+    return stats
+
+# ==================== Admin Endpoints ====================
+
+@app.get("/admin/users")
+async def get_all_users(
+    skip: int = 0,
+    limit: int = 50,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Get all users (admin only)"""
+    if not db.connected:
+        raise HTTPException(status_code=503, detail="Database not available")
+    
+    # Verify admin
+    admin_user = await get_current_admin(credentials)
+    
+    users = db.get_all_users(skip, limit)
+    total = db.users.count_documents({})
+    
+    return {
+        "users": users,
+        "total": total,
+        "page": skip // limit + 1 if limit > 0 else 1,
+        "limit": limit
+    }
+
+@app.get("/admin/stats")
+async def get_system_stats(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Get system-wide statistics (admin only)"""
+    if not db.connected:
+        raise HTTPException(status_code=503, detail="Database not available")
+    
+    # Verify admin
+    admin_user = await get_current_admin(credentials)
+    
+    stats = db.get_system_stats()
+    return stats
+
+@app.delete("/admin/users/{user_id}")
+async def delete_user(
+    user_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Delete a user (admin only)"""
+    if not db.connected:
+        raise HTTPException(status_code=503, detail="Database not available")
+    
+    # Verify admin
+    admin_user = await get_current_admin(credentials)
+    
+    # Prevent admin from deleting themselves
+    if admin_user["_id"] == user_id:
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+    
+    # Delete user
+    from bson import ObjectId
+    from bson.errors import InvalidId
+    
+    try:
+        # Try to convert to ObjectId
+        object_id = ObjectId(user_id)
+        logger.info(f"Attempting to delete user with ObjectId: {object_id}")
+        
+        result = db.users.delete_one({"_id": object_id})
+        
+        if result.deleted_count == 0:
+            logger.warning(f"User not found with ObjectId: {object_id}")
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Also delete user's queries
+        db.queries.delete_many({"user_id": user_id})
+        
+        logger.info(f"User deleted successfully: {user_id}")
+        return {"message": "User deleted successfully"}
+        
+    except InvalidId:
+        logger.error(f"Invalid ObjectId format: {user_id}")
+        raise HTTPException(status_code=400, detail="Invalid user ID format")
+
+@app.put("/admin/users/{user_id}")
+async def update_user(
+    user_id: str,
+    email: Optional[str] = None,
+    role: Optional[str] = None,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Update user (admin only)"""
+    if not db.connected:
+        raise HTTPException(status_code=503, detail="Database not available")
+    
+    # Verify admin
+    admin_user = await get_current_admin(credentials)
+    
+    # Build update dict
+    update_data = {}
+    if email:
+        update_data["email"] = email
+    if role and role in ["user", "admin"]:
+        # Prevent admin from demoting themselves
+        if admin_user["_id"] == user_id and role != "admin":
+            raise HTTPException(status_code=400, detail="Cannot change your own role")
+        update_data["role"] = role
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No valid fields to update")
+    
+    # Update user
+    from bson import ObjectId
+    from bson.errors import InvalidId
+    
+    try:
+        object_id = ObjectId(user_id)
+        logger.info(f"Updating user {object_id} with data: {update_data}")
+        
+        result = db.users.update_one(
+            {"_id": object_id},
+            {"$set": update_data}
+        )
+        
+        if result.matched_count == 0:
+            logger.warning(f"User not found with ObjectId: {object_id}")
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        logger.info(f"User updated successfully: {user_id}")
+        return {"message": "User updated successfully"}
+        
+    except InvalidId:
+        logger.error(f"Invalid ObjectId format: {user_id}")
+        raise HTTPException(status_code=400, detail="Invalid user ID format")
+
+@app.get("/admin/queries")
+async def get_all_queries(
+    skip: int = 0,
+    limit: int = 50,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Get all queries (admin only)"""
+    if not db.connected:
+        raise HTTPException(status_code=503, detail="Database not available")
+    
+    # Verify admin
+    admin_user = await get_current_admin(credentials)
+    
+    queries = list(
+        db.queries.find({})
+        .sort("timestamp", -1)
+        .skip(skip)
+        .limit(limit)
+    )
+    
+    for query in queries:
+        query["_id"] = str(query["_id"])
+        query["timestamp"] = query["timestamp"].isoformat()
+    
+    total = db.queries.count_documents({})
+    
+    return {
+        "queries": queries,
+        "total": total,
+        "page": skip // limit + 1 if limit > 0 else 1,
+        "limit": limit
+    }
 
 if __name__ == "__main__":
     import uvicorn

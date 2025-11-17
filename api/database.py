@@ -69,18 +69,19 @@ class Database:
     
     # ==================== User Operations ====================
     
-    def create_user(self, username: str, email: str, password_hash: str) -> Optional[str]:
+    def create_user(self, username: str, email: str, password_hash: str, role: str = "user") -> Optional[str]:
         """Create new user"""
         try:
             user_doc = {
                 "username": username,
                 "email": email,
                 "password_hash": password_hash,
+                "role": role,  # "user" or "admin"
                 "created_at": datetime.utcnow(),
                 "last_login": None
             }
             result = self.users.insert_one(user_doc)
-            logger.info(f"User created: {username}")
+            logger.info(f"User created: {username} (role: {role})")
             return str(result.inserted_id)
         except DuplicateKeyError:
             logger.warning(f"User already exists: {username}")
@@ -210,6 +211,90 @@ class Database:
             }
         except Exception as e:
             logger.error(f"Error getting stats: {e}")
+            return {}
+    
+    # ==================== Admin Operations ====================
+    
+    def create_admin_user(self, username: str, email: str, password_hash: str) -> Optional[str]:
+        """Create admin user if not exists"""
+        try:
+            # Check if admin already exists
+            existing = self.users.find_one({"username": username})
+            if existing:
+                logger.info(f"Admin user already exists: {username}")
+                return str(existing["_id"])
+            
+            return self.create_user(username, email, password_hash, role="admin")
+        except Exception as e:
+            logger.error(f"Error creating admin user: {e}")
+            return None
+    
+    def get_all_users(self, skip: int = 0, limit: int = 50) -> List[Dict[str, Any]]:
+        """Get all users (admin only)"""
+        try:
+            users = list(
+                self.users.find({}, {"password_hash": 0})
+                .sort("created_at", DESCENDING)
+                .skip(skip)
+                .limit(limit)
+            )
+            
+            for user in users:
+                user["_id"] = str(user["_id"])
+                if user.get("created_at"):
+                    user["created_at"] = user["created_at"].isoformat()
+                if user.get("last_login"):
+                    user["last_login"] = user["last_login"].isoformat()
+            
+            return users
+        except Exception as e:
+            logger.error(f"Error getting all users: {e}")
+            return []
+    
+    def get_system_stats(self) -> Dict[str, Any]:
+        """Get system-wide statistics (admin only)"""
+        try:
+            total_users = self.users.count_documents({})
+            total_queries = self.queries.count_documents({})
+            
+            # Queries by language
+            pipeline = [
+                {"$group": {
+                    "_id": "$language",
+                    "count": {"$sum": 1}
+                }}
+            ]
+            by_language = {doc["_id"]: doc["count"] for doc in self.queries.aggregate(pipeline)}
+            
+            # Queries by prediction
+            pipeline = [
+                {"$group": {
+                    "_id": "$prediction.label",
+                    "count": {"$sum": 1}
+                }}
+            ]
+            by_prediction = {doc["_id"]: doc["count"] for doc in self.queries.aggregate(pipeline)}
+            
+            # Recent queries
+            recent_queries = list(
+                self.queries.find({})
+                .sort("timestamp", DESCENDING)
+                .limit(10)
+            )
+            
+            for query in recent_queries:
+                query["_id"] = str(query["_id"])
+                query["timestamp"] = query["timestamp"].isoformat()
+            
+            return {
+                "total_users": total_users,
+                "total_queries": total_queries,
+                "by_language": by_language,
+                "by_prediction": by_prediction,
+                "recent_queries": recent_queries
+            }
+        except Exception as e:
+            logger.error(f"Error getting system stats: {e}")
             return {}
 
 # Global database instance

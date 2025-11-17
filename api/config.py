@@ -65,4 +65,6 @@ DEFAULT_LANGUAGE = "en"
 
 # PhoBERT configuration (Vietnamese)
 PHOBERT_MODEL_NAME = os.getenv("PHOBERT_MODEL_NAME", "vinai/phobert-base")
-PHOBERT_MODEL_PATH = os.getenv("PHOBERT_MODEL_PATH")  # Optional local path
+# Get absolute path to PhoBERT model directory
+_default_phobert_path = os.path.join(_current_dir, "..", "models", "PhoBERT")
+PHOBERT_MODEL_PATH = os.getenv("PHOBERT_MODEL_PATH", os.path.normpath(_default_phobert_path))

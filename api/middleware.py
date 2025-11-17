@@ -65,3 +65,15 @@ async def get_current_user_optional(request: Request) -> Optional[dict]:
     except Exception as e:
         logger.warning(f"Error getting optional user: {e}")
         return None
+
+async def get_current_admin(credentials: HTTPAuthorizationCredentials) -> dict:
+    """Get current user and verify admin role"""
+    user = await get_current_user(credentials)
+    
+    if user.get("role") != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+    
+    return user
