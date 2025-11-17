@@ -26,8 +26,12 @@ export default function Login() {
       localStorage.setItem('token', response.data.access_token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
 
-      // Redirect to detector
-      router.push('/detector');
+      // Redirect based on role
+      if (response.data.user.role === 'admin') {
+        router.push('/admin');
+      } else {
+        router.push('/detector');
+      }
     } catch (err) {
       setError(err.response?.data?.detail || 'Login failed. Please try again.');
     } finally {

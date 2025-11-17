@@ -78,6 +78,14 @@ export default function History() {
             <p className="text-gray-600">View your past predictions</p>
           </div>
           <div className="flex gap-4">
+            {user?.role === 'admin' && (
+              <a
+                href="/admin"
+                className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 font-semibold"
+              >
+                🛡️ Admin
+              </a>
+            )}
             <a
               href="/detector"
               className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-semibold"
@@ -103,7 +111,7 @@ export default function History() {
             <div className="bg-white rounded-lg shadow p-6">
               <h3 className="text-gray-600 text-sm font-semibold mb-2">By Language</h3>
               <div className="space-y-1">
-                <p className="text-sm">🇬🇧 English: {stats.by_language?.en || 0}</p>
+                <p className="text-sm">Eng English: {stats.by_language?.en || 0}</p>
                 <p className="text-sm">🇻🇳 Vietnamese: {stats.by_language?.vi || 0}</p>
               </div>
             </div>
@@ -155,7 +163,7 @@ export default function History() {
                           {query.prediction.label.toUpperCase()}
                         </span>
                         <span className="text-sm text-gray-500">
-                          {query.language === 'en' ? '🇬🇧 English' : '🇻🇳 Vietnamese'}
+                          {query.language === 'en' ? 'Eng English' : '🇻🇳 Vietnamese'}
                         </span>
                         <span className="text-sm text-gray-500">
                           {new Date(query.timestamp).toLocaleString()}

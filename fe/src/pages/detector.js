@@ -101,9 +101,17 @@ export default function Detector() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-4xl font-bold text-white mb-2">Fake News Detector</h1>
-            <p className="text-blue-100">Welcome, {user?.username}!</p>
+            <p className="text-blue-100">Welcome, {user?.username}! {user?.role === 'admin' && '(Admin)'}</p>
           </div>
           <div className="flex gap-4">
+            {user?.role === 'admin' && (
+              <a
+                href="/admin"
+                className="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 font-semibold"
+              >
+                🛡️ Admin
+              </a>
+            )}
             <a
               href="/history"
               className="bg-white text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50 font-semibold"
@@ -134,7 +142,7 @@ export default function Detector() {
                     onChange={(e) => setLanguage(e.target.value)}
                     className="w-5 h-5 text-blue-600"
                   />
-                  <span className="text-gray-700 font-semibold">🇬🇧 English</span>
+                  <span className="text-gray-700 font-semibold">En English</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input

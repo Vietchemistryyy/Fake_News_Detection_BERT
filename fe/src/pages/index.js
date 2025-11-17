@@ -1,4 +1,3 @@
-import React from 'react';
 import Link from 'next/link';
 
 export default function Home() {
@@ -10,10 +9,13 @@ export default function Home() {
           {/* Logo/Header */}
           <div className="text-center mb-8">
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-2">
-              Fake News Detector
+              🛡️ Fake News Detector
             </h1>
             <p className="text-lg text-gray-600">
-              Advanced AI-powered news verification system
+              AI-Powered Multi-Language News Verification System
+            </p>
+            <p className="text-sm text-gray-500 mt-2">
+              Powered by BERT, PhoBERT & Advanced AI Models
             </p>
           </div>
 
@@ -26,9 +28,9 @@ export default function Home() {
                 </div>
               </div>
               <div>
-                <h3 className="text-lg font-medium text-gray-900">BERT Model</h3>
+                <h3 className="text-lg font-medium text-gray-900">Dual BERT Models</h3>
                 <p className="text-gray-600 text-sm">
-                  Fine-tuned RoBERTa for fake news detection with 95%+ accuracy
+                  RoBERTa (English) & PhoBERT (Vietnamese) fine-tuned for 92%+ accuracy
                 </p>
               </div>
             </div>
@@ -36,13 +38,13 @@ export default function Home() {
             <div className="flex gap-4">
               <div className="flex-shrink-0">
                 <div className="flex items-center justify-center h-12 w-12 rounded-md bg-purple-500 text-white">
-                  <span className="text-xl">🔍</span>
+                  <span className="text-xl">🌍</span>
                 </div>
               </div>
               <div>
-                <h3 className="text-lg font-medium text-gray-900">OpenAI Verification</h3>
+                <h3 className="text-lg font-medium text-gray-900">Multi-Language</h3>
                 <p className="text-gray-600 text-sm">
-                  Cross-verify predictions with GPT-3.5-turbo for accuracy
+                  Support for English and Vietnamese news articles
                 </p>
               </div>
             </div>
@@ -50,13 +52,13 @@ export default function Home() {
             <div className="flex gap-4">
               <div className="flex-shrink-0">
                 <div className="flex items-center justify-center h-12 w-12 rounded-md bg-green-500 text-white">
-                  <span className="text-xl">📊</span>
+                  <span className="text-xl">🔍</span>
                 </div>
               </div>
               <div>
-                <h3 className="text-lg font-medium text-gray-900">Detailed Analysis</h3>
+                <h3 className="text-lg font-medium text-gray-900">AI Verification</h3>
                 <p className="text-gray-600 text-sm">
-                  Get confidence scores and reasoning for each verdict
+                  Optional cross-verification with Gemini, Groq, or OpenAI
                 </p>
               </div>
             </div>
@@ -64,13 +66,41 @@ export default function Home() {
             <div className="flex gap-4">
               <div className="flex-shrink-0">
                 <div className="flex items-center justify-center h-12 w-12 rounded-md bg-yellow-500 text-white">
+                  <span className="text-xl">📊</span>
+                </div>
+              </div>
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">Query History</h3>
+                <p className="text-gray-600 text-sm">
+                  Track your analysis history with detailed statistics
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <div className="flex-shrink-0">
+                <div className="flex items-center justify-center h-12 w-12 rounded-md bg-red-500 text-white">
                   <span className="text-xl">⚡</span>
                 </div>
               </div>
               <div>
-                <h3 className="text-lg font-medium text-gray-900">Real-time Processing</h3>
+                <h3 className="text-lg font-medium text-gray-900">Real-time Analysis</h3>
                 <p className="text-gray-600 text-sm">
-                  Get instant results with GPU-accelerated inference
+                  Instant results with GPU-accelerated inference
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <div className="flex-shrink-0">
+                <div className="flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
+                  <span className="text-xl">🛡️</span>
+                </div>
+              </div>
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">Admin Dashboard</h3>
+                <p className="text-gray-600 text-sm">
+                  Comprehensive system monitoring and user management
                 </p>
               </div>
             </div>
@@ -80,7 +110,7 @@ export default function Home() {
           <div className="space-y-4">
             <Link href="/login">
               <button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-4 px-6 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all text-lg">
-                Login to Start →
+                Login to Start 
               </button>
             </Link>
             <Link href="/register">
@@ -96,27 +126,49 @@ export default function Home() {
             <ol className="space-y-3 text-gray-600">
               <li className="flex gap-3">
                 <span className="flex-shrink-0 font-bold text-blue-600">1.</span>
-                <span>Paste your news article text (10-5000 characters)</span>
+                <span>Login or create an account to get started</span>
               </li>
               <li className="flex gap-3">
                 <span className="flex-shrink-0 font-bold text-blue-600">2.</span>
-                <span>Choose to enable OpenAI verification (optional)</span>
+                <span>Select language (English or Vietnamese) and paste your news article</span>
               </li>
               <li className="flex gap-3">
                 <span className="flex-shrink-0 font-bold text-blue-600">3.</span>
-                <span>Get instant analysis with confidence scores</span>
+                <span>Optionally enable AI verification for cross-checking</span>
               </li>
               <li className="flex gap-3">
                 <span className="flex-shrink-0 font-bold text-blue-600">4.</span>
-                <span>Review detailed reasoning and concerns</span>
+                <span>Get instant analysis with confidence scores and detailed reasoning</span>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 font-bold text-blue-600">5.</span>
+                <span>View your query history and statistics anytime</span>
               </li>
             </ol>
+          </div>
+
+          {/* Tech Stack */}
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">Technology Stack</h3>
+            <div className="flex flex-wrap gap-2">
+              <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">RoBERTa</span>
+              <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">PhoBERT</span>
+              <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">FastAPI</span>
+              <span className="px-3 py-1 bg-yellow-100 text-yellow-700 text-xs font-semibold rounded-full">Next.js</span>
+              <span className="px-3 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded-full">MongoDB</span>
+              <span className="px-3 py-1 bg-indigo-100 text-indigo-700 text-xs font-semibold rounded-full">PyTorch</span>
+            </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="text-center mt-8 text-white text-sm">
-          <p>Powered by BERT + OpenAI | Built with Next.js + FastAPI</p>
+        <div className="text-center mt-8 text-white">
+          <p className="text-sm font-medium">
+            Powered by BERT, PhoBERT & Advanced AI Models
+          </p>
+          <p className="text-xs mt-2 opacity-90">
+            © 2025 Nguyen Quoc Viet. All rights reserved.
+          </p>
         </div>
       </div>
     </div>
