@@ -16,7 +16,7 @@ Hệ thống phát hiện tin giả toàn diện sử dụng BERT models, hỗ t
 ### 🤖 AI Models
 - **RoBERTa** (English) - Fine-tuned for fake news detection (92%+ accuracy)
 - **PhoBERT** (Vietnamese) - Fine-tuned on Vietnamese news dataset (92%+ accuracy)
-- **AI Verification** - Optional cross-verification with Gemini, Groq, or OpenAI
+- **AI Verification** - Optional cross-verification with Gemini & Groq (100% FREE)
 - **MC Dropout** - Uncertainty estimation for predictions
 
 ### 👥 User Management
