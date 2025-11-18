@@ -1,11 +1,11 @@
 {
   "name": "fake-news-detector",
   "version": "1.0.0",
-  "description": "Fake News Detection using BERT + OpenAI",
+  "description": "Fake News Detection using BERT + AI (Gemini & Groq) - 100% FREE",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3000",
-    "build": "next build",
+    "dev": "set NODE_OPTIONS=--max-old-space-size=4096 && next dev -p 3000",
+    "build": "set NODE_OPTIONS=--max-old-space-size=4096 && next build",
     "start": "next start",
     "lint": "next lint"
   },

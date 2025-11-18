@@ -58,7 +58,7 @@ export default function Home() {
               <div>
                 <h3 className="text-lg font-medium text-gray-900">AI Verification</h3>
                 <p className="text-gray-600 text-sm">
-                  Optional cross-verification with Gemini, Groq, or OpenAI
+                  Optional cross-verification with Gemini & Groq (100% FREE)
                 </p>
               </div>
             </div>

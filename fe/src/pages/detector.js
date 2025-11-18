@@ -190,7 +190,7 @@ export default function Detector() {
                   onChange={(e) => setUseAI(e.target.checked)}
                   className="w-5 h-5 text-blue-600 rounded"
                 />
-                <span className="text-gray-700">AI Verification (Gemini/Groq)</span>
+                <span className="text-gray-700">AI Verification (Gemini + Groq)</span>
               </label>
 
               <label className="flex items-center gap-2 cursor-pointer">
@@ -310,76 +310,86 @@ export default function Detector() {
               </div>
             </div>
 
-            {/* AI Verification Result */}
-            {result.openai_result && result.openai_result.is_available && (
-              <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-l-yellow-500">
-                <h2 className="text-xl font-bold text-gray-800 mb-4">
-                  {language === 'en' ? 'AI Verification' : 'Xác minh AI'}
+            {/* AI Verification Results - FREE APIs only */}
+            {(result.gemini_result || result.groq_result) && (
+              <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg shadow-lg p-6 border-2 border-purple-200">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                  🤖 {language === 'en' ? 'AI Verification Panel' : 'Bảng xác minh AI'}
                 </h2>
 
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">
-                      {language === 'en' ? 'Verdict' : 'Kết luận'}
-                    </p>
-                    <p className="text-2xl font-bold uppercase">
-                      <span className={`px-3 py-1 rounded-full ${
-                        result.openai_result.verdict === 'fake'
-                          ? 'bg-red-100 text-red-700'
-                          : 'bg-green-100 text-green-700'
-                      }`}>
-                        {result.openai_result.verdict === 'fake'
-                          ? (language === 'en' ? 'FAKE' : 'GIẢ')
-                          : (language === 'en' ? 'REAL' : 'THẬT')}
-                      </span>
-                    </p>
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Gemini */}
+                  {result.gemini_result && result.gemini_result.is_available && (
+                    <div className="bg-white rounded-lg p-4 border-2 border-blue-200 hover:shadow-md transition-shadow">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-2xl">✨</span>
+                        <h3 className="font-bold text-lg text-blue-700">Gemini</h3>
+                      </div>
+                      <div className="mb-3">
+                        <span className={`px-3 py-1 rounded-full text-sm font-bold ${
+                          result.gemini_result.verdict === 'fake'
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-green-100 text-green-700'
+                        }`}>
+                          {result.gemini_result.verdict === 'fake'
+                            ? (language === 'en' ? 'FAKE' : 'GIẢ')
+                            : (language === 'en' ? 'REAL' : 'THẬT')}
+                        </span>
+                        <p className="text-xl font-bold mt-2">
+                          {(result.gemini_result.confidence * 100).toFixed(1)}%
+                        </p>
+                      </div>
+                      <p className="text-xs text-gray-600 line-clamp-3">
+                        {result.gemini_result.reasoning}
+                      </p>
+                    </div>
+                  )}
 
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">
-                      {language === 'en' ? 'Confidence' : 'Độ tin cậy'}
-                    </p>
-                    <p className="text-2xl font-bold">
-                      {(result.openai_result.confidence * 100).toFixed(1)}%
-                    </p>
-                  </div>
+                  {/* Groq */}
+                  {result.groq_result && result.groq_result.is_available && (
+                    <div className="bg-white rounded-lg p-4 border-2 border-orange-200 hover:shadow-md transition-shadow">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-2xl">⚡</span>
+                        <h3 className="font-bold text-lg text-orange-700">Groq</h3>
+                      </div>
+                      <div className="mb-3">
+                        <span className={`px-3 py-1 rounded-full text-sm font-bold ${
+                          result.groq_result.verdict === 'fake'
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-green-100 text-green-700'
+                        }`}>
+                          {result.groq_result.verdict === 'fake'
+                            ? (language === 'en' ? 'FAKE' : 'GIẢ')
+                            : (language === 'en' ? 'REAL' : 'THẬT')}
+                        </span>
+                        <p className="text-xl font-bold mt-2">
+                          {(result.groq_result.confidence * 100).toFixed(1)}%
+                        </p>
+                      </div>
+                      <p className="text-xs text-gray-600 line-clamp-3">
+                        {result.groq_result.reasoning}
+                      </p>
+                    </div>
+                  )}
+
+
                 </div>
-
-                <div className="mb-4">
-                  <p className="text-sm font-semibold text-gray-700 mb-2">
-                    {language === 'en' ? 'Reasoning' : 'Lý do'}
-                  </p>
-                  <p className="text-gray-600">{result.openai_result.reasoning}</p>
-                </div>
-
-                {result.openai_result.concerns && result.openai_result.concerns.length > 0 && (
-                  <div>
-                    <p className="text-sm font-semibold text-gray-700 mb-2">
-                      {language === 'en' ? 'Concerns' : 'Vấn đề'}
-                    </p>
-                    <ul className="list-disc list-inside space-y-1">
-                      {result.openai_result.concerns.map((concern, idx) => (
-                        <li key={idx} className="text-gray-600 text-sm">{concern}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
               </div>
             )}
 
-            {/* Combined Result */}
+            {/* Combined Result with Voting */}
             {result.combined_result && (
-              <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg shadow-lg p-6 border-2 border-purple-200">
-                <h2 className="text-xl font-bold text-gray-800 mb-4">
-                  🎯 {language === 'en' ? 'Combined Verdict' : 'Kết luận tổng hợp'}
+              <div className="bg-gradient-to-r from-yellow-50 via-orange-50 to-red-50 rounded-lg shadow-2xl p-6 border-4 border-yellow-300">
+                <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                  🎯 {language === 'en' ? 'Final Verdict (Majority Voting)' : 'Kết luận cuối cùng (Bỏ phiếu đa số)'}
                 </h2>
 
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  <div className="bg-white rounded-lg p-4 text-center">
                     <p className="text-sm text-gray-600 mb-1">
-                      {language === 'en' ? 'Final Verdict' : 'Kết luận cuối cùng'}
+                      {language === 'en' ? 'Final Verdict' : 'Kết luận'}
                     </p>
-                    <p className="text-3xl font-bold uppercase">
+                    <p className="text-2xl font-bold uppercase">
                       <span className={`px-3 py-1 rounded-full ${
                         result.combined_result.verdict === 'fake'
                           ? 'bg-red-100 text-red-700'
@@ -392,31 +402,93 @@ export default function Detector() {
                     </p>
                   </div>
 
-                  <div>
+                  <div className="bg-white rounded-lg p-4 text-center">
                     <p className="text-sm text-gray-600 mb-1">
                       {language === 'en' ? 'Confidence' : 'Độ tin cậy'}
                     </p>
-                    <p className="text-3xl font-bold">
+                    <p className="text-3xl font-bold text-blue-600">
                       {(result.combined_result.confidence * 100).toFixed(1)}%
+                    </p>
+                  </div>
+
+                  <div className="bg-white rounded-lg p-4 text-center">
+                    <p className="text-sm text-gray-600 mb-1">
+                      {language === 'en' ? 'Agreement' : 'Đồng thuận'}
+                    </p>
+                    <p className="text-lg font-bold text-purple-600 uppercase">
+                      {result.combined_result.agreement === 'unanimous' ? '🎉 100%' : '📊 Majority'}
                     </p>
                   </div>
                 </div>
 
-                <div className="bg-white rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-2">
-                    {language === 'en' ? 'Model Weights' : 'Trọng số mô hình'}
+                {/* Voting Breakdown */}
+                <div className="bg-white rounded-lg p-4 mb-4">
+                  <p className="text-sm font-semibold text-gray-700 mb-3">
+                    📊 {language === 'en' ? 'Voting Results' : 'Kết quả bỏ phiếu'}
                   </p>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-700">BERT (60%)</span>
-                      <p className="font-semibold text-gray-900">{result.combined_result.bert_verdict}</p>
+                  <div className="flex items-center gap-4 mb-2">
+                    <div className="flex-1">
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-green-700 font-semibold">REAL</span>
+                        <span className="font-bold">{result.combined_result.real_votes}/{result.combined_result.total_votes}</span>
+                      </div>
+                      <div className="confidence-bar">
+                        <div
+                          className="confidence-bar-fill bg-gradient-to-r from-green-500 to-green-600"
+                          style={{ width: `${(result.combined_result.real_votes / result.combined_result.total_votes) * 100}%` }}
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-gray-700">AI (40%)</span>
-                      <p className="font-semibold text-gray-900">{result.combined_result.openai_verdict}</p>
+                    <div className="flex-1">
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-red-700 font-semibold">FAKE</span>
+                        <span className="font-bold">{result.combined_result.fake_votes}/{result.combined_result.total_votes}</span>
+                      </div>
+                      <div className="confidence-bar">
+                        <div
+                          className="confidence-bar-fill bg-gradient-to-r from-red-500 to-red-600"
+                          style={{ width: `${(result.combined_result.fake_votes / result.combined_result.total_votes) * 100}%` }}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
+
+                {/* Individual Verdicts */}
+                {result.combined_result.breakdown && (
+                  <div className="bg-white rounded-lg p-4">
+                    <p className="text-sm font-semibold text-gray-700 mb-3">
+                      {language === 'en' ? 'Individual Verdicts' : 'Kết luận từng mô hình'}
+                    </p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                      {result.combined_result.breakdown.bert && (
+                        <div className="text-center">
+                          <span className="text-gray-600">🤖 BERT</span>
+                          <p className={`font-bold ${result.combined_result.breakdown.bert.verdict === 'fake' ? 'text-red-600' : 'text-green-600'}`}>
+                            {result.combined_result.breakdown.bert.verdict.toUpperCase()}
+                          </p>
+                        </div>
+                      )}
+                      {result.combined_result.breakdown.gemini && (
+                        <div className="text-center">
+                          <span className="text-gray-600">✨ Gemini</span>
+                          <p className={`font-bold ${result.combined_result.breakdown.gemini.verdict === 'fake' ? 'text-red-600' : 'text-green-600'}`}>
+                            {result.combined_result.breakdown.gemini.verdict.toUpperCase()}
+                          </p>
+                        </div>
+                      )}
+                      {result.combined_result.breakdown.groq && (
+                        <div className="text-center">
+                          <span className="text-gray-600">⚡ Groq</span>
+                          <p className={`font-bold ${result.combined_result.breakdown.groq.verdict === 'fake' ? 'text-red-600' : 'text-green-600'}`}>
+                            {result.combined_result.breakdown.groq.verdict.toUpperCase()}
+                          </p>
+                        </div>
+                      )}
+
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -454,6 +526,12 @@ export default function Detector() {
           border-top-color: white;
           border-radius: 50%;
           animation: spin 0.8s linear infinite;
+        }
+        .line-clamp-3 {
+          display: -webkit-box;
+          -webkit-line-clamp: 3;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
         }
         @keyframes spin {
           to { transform: rotate(360deg); }
