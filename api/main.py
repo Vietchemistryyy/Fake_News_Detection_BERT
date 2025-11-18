@@ -7,7 +7,6 @@ from pydantic import BaseModel
 from typing import Optional, List
 import config
 from model_loader import ModelLoader
-from openai_verifier import OpenAIVerifier
 from utils import clean_text, setup_logging
 from database import db
 import auth
@@ -19,7 +18,7 @@ from models_pydantic import (
     HealthResponse
 )
 
-# Import new verifiers
+# Import AI verifiers (FREE only)
 try:
     from gemini_verifier import GeminiVerifier
     GEMINI_AVAILABLE = True
@@ -40,15 +39,56 @@ logger = logging.getLogger(__name__)
 
 # Global model and verifier instances
 model_loader: Optional[ModelLoader] = None
-openai_verifier: Optional[OpenAIVerifier] = None
 gemini_verifier: Optional[GeminiVerifier] = None
 groq_verifier: Optional[GroqVerifier] = None
 active_verifier = None  # Will be set to the first available verifier
 
+def combine_all_verdicts(bert_result: dict, ai_results: list) -> dict:
+    """Combine BERT and multiple AI verdicts using majority voting."""
+    # Collect all verdicts
+    verdicts = [bert_result["label"]]
+    for name, result in ai_results:
+        verdicts.append(result.get("verdict", "unknown"))
+    
+    # Count votes
+    fake_votes = verdicts.count("fake")
+    real_votes = verdicts.count("real")
+    
+    # Majority voting
+    final_verdict = "fake" if fake_votes > real_votes else "real"
+    
+    # Calculate confidence (average of matching verdicts)
+    matching_confidences = [bert_result["confidence"]]
+    for name, result in ai_results:
+        if result.get("verdict") == final_verdict:
+            matching_confidences.append(result.get("confidence", 0.5))
+    
+    avg_confidence = sum(matching_confidences) / len(matching_confidences)
+    
+    # Build detailed breakdown
+    breakdown = {
+        "bert": {"verdict": bert_result["label"], "confidence": bert_result["confidence"]}
+    }
+    for name, result in ai_results:
+        breakdown[name.lower()] = {
+            "verdict": result.get("verdict", "unknown"),
+            "confidence": result.get("confidence", 0.0)
+        }
+    
+    return {
+        "verdict": final_verdict,
+        "confidence": avg_confidence,
+        "total_votes": len(verdicts),
+        "fake_votes": fake_votes,
+        "real_votes": real_votes,
+        "breakdown": breakdown,
+        "agreement": "unanimous" if (fake_votes == len(verdicts) or real_votes == len(verdicts)) else "majority"
+    }
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage model loading on startup."""
-    global model_loader, openai_verifier, gemini_verifier, groq_verifier, active_verifier
+    global model_loader, gemini_verifier, groq_verifier, active_verifier
     
     # Connect to MongoDB
     logger.info("Connecting to MongoDB...")
@@ -76,7 +116,7 @@ async def lifespan(app: FastAPI):
         logger.warning(f"Vietnamese model not loaded: {e}")
         logger.warning("Vietnamese predictions will not be available")
     
-    # Initialize verifiers based on config
+    # Initialize AI verifiers (FREE only)
     logger.info("Initializing AI verifiers...")
     
     # Gemini (recommended, free)
@@ -95,13 +135,6 @@ async def lifespan(app: FastAPI):
             if not active_verifier:
                 active_verifier = groq_verifier
     
-    # OpenAI (paid)
-    openai_verifier = OpenAIVerifier()
-    if openai_verifier.enabled:
-        logger.info("✓ OpenAI verifier enabled")
-        if not active_verifier:
-            active_verifier = openai_verifier
-    
     if not active_verifier:
         logger.warning("⚠ No AI verifier enabled - only BERT will be used")
     else:
@@ -118,7 +151,7 @@ async def lifespan(app: FastAPI):
 # Create FastAPI app
 app = FastAPI(
     title="Fake News Detection API",
-    description="BERT + OpenAI powered fake news detection system",
+    description="BERT + AI (Gemini & Groq) powered fake news detection system - 100% FREE",
     version="1.0.0",
     lifespan=lifespan
 )
@@ -201,20 +234,33 @@ async def predict(
         )
         
         ai_result = None
+        gemini_result = None
+        groq_result = None
         combined_result = None
         
-        # AI verification if requested
-        if request.verify_with_ai and active_verifier:
-            verifier_name = active_verifier.__class__.__name__
-            logger.info(f"Performing AI verification with {verifier_name}...")
-            ai_result = active_verifier.verify_news(text)
+        # AI verification if requested - Run ALL enabled verifiers (FREE only)
+        if request.verify_with_ai:
+            ai_results = []
             
-            # Combine results
-            if ai_result.get("is_available"):
-                if hasattr(active_verifier, 'combine_verdicts'):
-                    combined_result = active_verifier.combine_verdicts(bert_result, ai_result)
-                else:
-                    combined_result = OpenAIVerifier.combine_verdicts(bert_result, ai_result)
+            # Gemini
+            if gemini_verifier and gemini_verifier.enabled:
+                logger.info("Performing AI verification with Gemini...")
+                gemini_result = gemini_verifier.verify_news(text)
+                if gemini_result.get("is_available"):
+                    ai_results.append(("Gemini", gemini_result))
+            
+            # Groq
+            if groq_verifier and groq_verifier.enabled:
+                logger.info("Performing AI verification with Groq...")
+                groq_result = groq_verifier.verify_news(text)
+                if groq_result.get("is_available"):
+                    ai_results.append(("Groq", groq_result))
+            
+            # Combine results with majority voting
+            if ai_results:
+                combined_result = combine_all_verdicts(bert_result, ai_results)
+                # Keep backward compatibility
+                ai_result = ai_results[0][1] if ai_results else None
         
         # Save to database if user is logged in
         if current_user:
@@ -252,7 +298,8 @@ async def predict(
             confidence=bert_result["confidence"],
             probabilities=bert_result["probabilities"],
             language=request.language,
-            openai_result=ai_result,
+            gemini_result=gemini_result,
+            groq_result=groq_result,
             combined_result=combined_result
         )
         

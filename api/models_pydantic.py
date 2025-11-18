@@ -39,7 +39,8 @@ class PredictResponse(BaseModel):
     confidence: float
     probabilities: dict
     language: str
-    openai_result: Optional[dict] = None
+    gemini_result: Optional[dict] = None
+    groq_result: Optional[dict] = None
     combined_result: Optional[dict] = None
 
 # ==================== Query History Models ====================
