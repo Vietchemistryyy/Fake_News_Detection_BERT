@@ -1,5 +1,9 @@
 import os
 from typing import Optional
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Model configuration
 MODEL_NAME = os.getenv("MODEL_NAME", "roberta-base")
@@ -16,13 +20,7 @@ PORT = int(os.getenv("API_PORT", "8000"))
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:3001").split(",")
 
-# AI Verification APIs configuration
-# OpenAI (paid, requires credit card)
-OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
-OPENAI_TIMEOUT = int(os.getenv("OPENAI_TIMEOUT", "10"))
-ENABLE_OPENAI = os.getenv("ENABLE_OPENAI", "false").lower() == "true"
-
+# AI Verification APIs configuration (FREE only)
 # Gemini (FREE, recommended)
 GEMINI_API_KEY: Optional[str] = os.getenv("GEMINI_API_KEY")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
@@ -32,9 +30,6 @@ ENABLE_GEMINI = os.getenv("ENABLE_GEMINI", "false").lower() == "true"
 GROQ_API_KEY: Optional[str] = os.getenv("GROQ_API_KEY")
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
 ENABLE_GROQ = os.getenv("ENABLE_GROQ", "false").lower() == "true"
-
-# Verification provider priority (first available will be used)
-VERIFICATION_PROVIDER = os.getenv("VERIFICATION_PROVIDER", "auto")  # auto, openai, gemini, groq
 
 # Model inference settings
 # Higher temperature = less confident predictions (better for overfit models)

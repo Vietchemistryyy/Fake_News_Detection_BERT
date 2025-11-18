@@ -1,57 +1,49 @@
 import json
 import logging
-import os
 from typing import Dict, Any, Optional
-
-try:
-    from groq import Groq
-    GROQ_AVAILABLE = True
-except ImportError:
-    GROQ_AVAILABLE = False
-
-from utils import truncate_text
+import config
+from utils import truncate_text, parse_json_response
 
 logger = logging.getLogger(__name__)
 
 class GroqVerifier:
-    """Groq-based fake news verifier (FREE & FAST with Llama 3)."""
+    """Groq-based fake news verifier (Llama 3.1)."""
     
     def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or os.getenv("GROQ_API_KEY")
-        self.model_name = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
-        self.enabled = bool(self.api_key) and GROQ_AVAILABLE and os.getenv("ENABLE_GROQ", "false").lower() == "true"
-        
-        if not GROQ_AVAILABLE:
-            logger.warning("groq not installed. Install: pip install groq")
-            self.enabled = False
+        self.api_key = api_key or config.GROQ_API_KEY
+        self.model = config.GROQ_MODEL
+        self.enabled = bool(self.api_key) and config.ENABLE_GROQ
         
         if self.enabled:
             try:
+                from groq import Groq
                 self.client = Groq(api_key=self.api_key)
-                logger.info(f"Groq verifier initialized with model: {self.model_name}")
+                logger.info(f"✓ Groq verifier initialized with model: {self.model}")
             except Exception as e:
                 logger.error(f"Failed to initialize Groq: {e}")
                 self.enabled = False
+                self.client = None
         else:
             self.client = None
+            logger.warning("Groq verifier disabled (no API key or ENABLE_GROQ=false)")
     
     def verify_news(self, text: str) -> Dict[str, Any]:
-        """Verify news article using Groq (Llama 3)."""
+        """Verify news article using Groq."""
         if not self.enabled:
-            return self._default_response("Groq verification disabled")
+            return self._default_response()
         
         try:
-            truncated_text = truncate_text(text, 800)
+            truncated_text = truncate_text(text, 500)
             
-            system_prompt = """You are a fact-checking AI. Analyze news articles objectively.
+            system_prompt = """You are a neutral fact-checking assistant. Analyze the given news article objectively.
 
-Guidelines:
-- Only mark as "fake" if you find clear misinformation
-- Real news can be brief without sources
-- Consider writing quality and logical consistency
-- If uncertain, lean toward "real" with lower confidence
+IMPORTANT GUIDELINES:
+1. Do NOT assume an article is fake just because it lacks sources
+2. Legitimate news articles often summarize without listing sources
+3. Only flag as "fake" if you find clear misinformation or fabricated claims
+4. If the content seems plausible but unverifiable, lean toward "real" with lower confidence
 
-Respond ONLY with valid JSON:
+Respond ONLY with valid JSON (no markdown, no extra text):
 {
     "verdict": "real" or "fake",
     "confidence": 0.0 to 1.0,
@@ -59,92 +51,62 @@ Respond ONLY with valid JSON:
     "concerns": ["concern1", "concern2"]
 }"""
 
-            completion = self.client.chat.completions.create(
-                model=self.model_name,
+            response = self.client.chat.completions.create(
+                model=self.model,
                 messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": f"Analyze this news:\n\n{truncated_text}"}
+                    {
+                        "role": "system",
+                        "content": system_prompt
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Analyze this news article:\n\n{truncated_text}"
+                    }
                 ],
                 temperature=0.3,
-                max_tokens=300,
+                max_tokens=200,
             )
             
-            response_text = completion.choices[0].message.content.strip()
+            response_text = response.choices[0].message.content.strip()
+            result = parse_json_response(response_text)
             
-            # Parse JSON response
-            result = self._parse_response(response_text)
+            # Validate response
+            if "verdict" not in result or "confidence" not in result:
+                logger.warning(f"Invalid Groq response: {result}")
+                return self._default_response()
             
-            # Validate and adjust
-            result = self._validate_result(result)
+            # Ensure verdict is real/fake
+            if result["verdict"].lower() not in ["real", "fake"]:
+                result["verdict"] = "real" if result.get("confidence", 0.5) < 0.5 else "fake"
+            
             result["is_available"] = True
-            result["provider"] = "groq"
+            
+            # Adjust confidence if too certain without evidence
+            if result["confidence"] > 0.85 and len(result.get("concerns", [])) < 2:
+                result["confidence"] = min(0.75, result["confidence"])
             
             return result
             
         except Exception as e:
             logger.error(f"Groq verification error: {str(e)}")
-            return self._error_response(str(e))
+            return self._error_response()
     
-    def _parse_response(self, text: str) -> Dict[str, Any]:
-        """Parse JSON from Groq response."""
-        text = text.replace("```json", "").replace("```", "").strip()
-        
-        try:
-            return json.loads(text)
-        except json.JSONDecodeError:
-            import re
-            json_match = re.search(r'\{.*\}', text, re.DOTALL)
-            if json_match:
-                try:
-                    return json.loads(json_match.group(0))
-                except:
-                    pass
-            
-            logger.warning(f"Could not parse Groq response: {text}")
-            return {"error": "Failed to parse response"}
-    
-    def _validate_result(self, result: Dict[str, Any]) -> Dict[str, Any]:
-        """Validate and adjust result."""
-        if "error" in result:
-            return self._default_response("Parse error")
-        
-        if "verdict" not in result or "confidence" not in result:
-            return self._default_response("Invalid response structure")
-        
-        verdict = result["verdict"].lower()
-        if verdict not in ["real", "fake"]:
-            verdict = "real" if result.get("confidence", 0.5) < 0.5 else "fake"
-        result["verdict"] = verdict
-        
-        result["confidence"] = float(result.get("confidence", 0.5))
-        
-        # Cap extreme confidence
-        if result["confidence"] > 0.90:
-            result["confidence"] = min(0.85, result["confidence"])
-        
-        result["reasoning"] = result.get("reasoning", "No reasoning provided")
-        result["concerns"] = result.get("concerns", [])
-        
-        return result
-    
-    def _default_response(self, reason: str = "Verification disabled") -> Dict[str, Any]:
-        """Return default response."""
+    def _default_response(self) -> Dict[str, Any]:
+        """Return default response when verification is disabled."""
         return {
             "verdict": "unknown",
             "confidence": 0.5,
-            "reasoning": reason,
+            "reasoning": "Groq verification disabled",
             "concerns": [],
-            "is_available": False,
-            "provider": "groq"
+            "is_available": False
         }
     
-    def _error_response(self, error: str) -> Dict[str, Any]:
+    def _error_response(self) -> Dict[str, Any]:
         """Return error response."""
         return {
             "verdict": "unknown",
             "confidence": 0.5,
-            "reasoning": f"Groq API error: {error}",
+            "reasoning": "Groq API error occurred",
             "concerns": ["API connection failed"],
-            "is_available": False,
-            "provider": "groq"
+            "is_available": False
         }
