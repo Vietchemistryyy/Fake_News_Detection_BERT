@@ -42,10 +42,8 @@ passlib[bcrypt]==1.7.4
 bcrypt==4.0.1          # Compatible version với passlib
 
 # -----------------------------
-# AI Verification (Optional)
+# Groq AI (Optional - FREE)
 # -----------------------------
-openai>=1.3.9
-google-generativeai>=0.3.0
 groq>=0.4.0
 
 # -----------------------------
