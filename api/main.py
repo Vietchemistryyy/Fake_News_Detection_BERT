@@ -37,25 +37,41 @@ active_verifier = None  # Will be set to the first available verifier
 
 def combine_all_verdicts(bert_result: dict, ai_results: list) -> dict:
     """Combine BERT and multiple AI verdicts using majority voting."""
-    # Collect all verdicts
+    # Collect all verdicts with confidences
     verdicts = [bert_result["label"]]
+    all_results = [("BERT", bert_result["label"], bert_result["confidence"])]
+    
     for name, result in ai_results:
-        verdicts.append(result.get("verdict", "unknown"))
+        verdict = result.get("verdict", "unknown")
+        confidence = result.get("confidence", 0.5)
+        verdicts.append(verdict)
+        all_results.append((name, verdict, confidence))
     
     # Count votes
     fake_votes = verdicts.count("fake")
     real_votes = verdicts.count("real")
     
-    # Majority voting
-    final_verdict = "fake" if fake_votes > real_votes else "real"
+    # Majority voting with tie-breaking
+    if fake_votes > real_votes:
+        final_verdict = "fake"
+    elif real_votes > fake_votes:
+        final_verdict = "real"
+    else:
+        # TIE: Use confidence-based decision
+        fake_confidence = sum(conf for name, verdict, conf in all_results if verdict == "fake") / max(fake_votes, 1)
+        real_confidence = sum(conf for name, verdict, conf in all_results if verdict == "real") / max(real_votes, 1)
+        
+        # Choose verdict with higher average confidence
+        final_verdict = "fake" if fake_confidence >= real_confidence else "real"
+        logger.info(f"Tie-breaker: fake_conf={fake_confidence:.3f}, real_conf={real_confidence:.3f} → {final_verdict}")
     
     # Calculate confidence (average of matching verdicts)
-    matching_confidences = [bert_result["confidence"]]
-    for name, result in ai_results:
-        if result.get("verdict") == final_verdict:
-            matching_confidences.append(result.get("confidence", 0.5))
+    matching_confidences = []
+    for name, verdict, confidence in all_results:
+        if verdict == final_verdict:
+            matching_confidences.append(confidence)
     
-    avg_confidence = sum(matching_confidences) / len(matching_confidences)
+    avg_confidence = sum(matching_confidences) / len(matching_confidences) if matching_confidences else 0.5
     
     # Build detailed breakdown
     breakdown = {
