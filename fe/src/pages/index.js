@@ -56,9 +56,9 @@ export default function Home() {
                 </div>
               </div>
               <div>
-                <h3 className="text-lg font-medium text-gray-900">AI Verification</h3>
+                <h3 className="text-lg font-medium text-gray-900">Groq AI Cross-Check</h3>
                 <p className="text-gray-600 text-sm">
-                  Optional cross-verification with Gemini & Groq (100% FREE)
+                  Optional second opinion from Groq AI (FREE)
                 </p>
               </div>
             </div>

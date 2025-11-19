@@ -7,7 +7,7 @@ export default class MyDocument extends Document {
         <Head>
           <meta charSet="utf-8" />
           <meta name="theme-color" content="#000000" />
-          <meta name="description" content="Fake News Detection using BERT + AI (Gemini & Groq)" />
+          <meta name="description" content="Fake News Detection using BERT + Groq AI" />
         </Head>
         <body>
           <Main />

@@ -157,8 +157,8 @@ export default function Detector() {
               </div>
               <p className="text-sm text-gray-500 mt-2">
                 {language === 'en' 
-                  ? 'Using RoBERTa model (your trained model)'
-                  : 'Using PhoBERT model (Vietnamese)'}
+                  ? 'Using RoBERTa model'
+                  : 'Using PhoBERT model'}
               </p>
             </div>
 
@@ -190,7 +190,7 @@ export default function Detector() {
                   onChange={(e) => setUseAI(e.target.checked)}
                   className="w-5 h-5 text-blue-600 rounded"
                 />
-                <span className="text-gray-700">AI Verification (Gemini + Groq)</span>
+                <span className="text-gray-700">Cross-verify with Groq AI</span>
               </label>
 
               <label className="flex items-center gap-2 cursor-pointer">
@@ -310,69 +310,44 @@ export default function Detector() {
               </div>
             </div>
 
-            {/* AI Verification Results - FREE APIs only */}
-            {(result.gemini_result || result.groq_result) && (
-              <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg shadow-lg p-6 border-2 border-purple-200">
-                <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                  🤖 {language === 'en' ? 'AI Verification Panel' : 'Bảng xác minh AI'}
+            {/* Groq AI Cross-Verification */}
+            {result.groq_result && result.groq_result.is_available && (
+              <div className="bg-gradient-to-r from-orange-50 to-yellow-50 rounded-lg shadow-lg p-8 border-2 border-orange-200">
+                <h2 className="text-3xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                  ⚡ {language === 'en' ? 'Groq AI Cross-Verification' : 'Xác minh chéo Groq AI'}
                 </h2>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Gemini */}
-                  {result.gemini_result && result.gemini_result.is_available && (
-                    <div className="bg-white rounded-lg p-4 border-2 border-blue-200 hover:shadow-md transition-shadow">
-                      <div className="flex items-center gap-2 mb-3">
-                        <span className="text-2xl">✨</span>
-                        <h3 className="font-bold text-lg text-blue-700">Gemini</h3>
-                      </div>
-                      <div className="mb-3">
-                        <span className={`px-3 py-1 rounded-full text-sm font-bold ${
-                          result.gemini_result.verdict === 'fake'
-                            ? 'bg-red-100 text-red-700'
-                            : 'bg-green-100 text-green-700'
-                        }`}>
-                          {result.gemini_result.verdict === 'fake'
-                            ? (language === 'en' ? 'FAKE' : 'GIẢ')
-                            : (language === 'en' ? 'REAL' : 'THẬT')}
-                        </span>
-                        <p className="text-xl font-bold mt-2">
-                          {(result.gemini_result.confidence * 100).toFixed(1)}%
-                        </p>
-                      </div>
-                      <p className="text-xs text-gray-600 line-clamp-3">
-                        {result.gemini_result.reasoning}
+                
+                <div className="bg-white rounded-lg p-6 border-2 border-orange-300 shadow-md">
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <span className={`px-6 py-3 rounded-full text-xl font-bold ${
+                        result.groq_result.verdict === 'fake'
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-green-100 text-green-700'
+                      }`}>
+                        {result.groq_result.verdict === 'fake'
+                          ? (language === 'en' ? 'FAKE' : 'GIẢ')
+                          : (language === 'en' ? 'REAL' : 'THẬT')}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-base text-gray-600 mb-1">
+                        {language === 'en' ? 'Confidence' : 'Độ tin cậy'}
+                      </p>
+                      <p className="text-4xl font-bold text-orange-600">
+                        {(result.groq_result.confidence * 100).toFixed(1)}%
                       </p>
                     </div>
-                  )}
-
-                  {/* Groq */}
-                  {result.groq_result && result.groq_result.is_available && (
-                    <div className="bg-white rounded-lg p-4 border-2 border-orange-200 hover:shadow-md transition-shadow">
-                      <div className="flex items-center gap-2 mb-3">
-                        <span className="text-2xl">⚡</span>
-                        <h3 className="font-bold text-lg text-orange-700">Groq</h3>
-                      </div>
-                      <div className="mb-3">
-                        <span className={`px-3 py-1 rounded-full text-sm font-bold ${
-                          result.groq_result.verdict === 'fake'
-                            ? 'bg-red-100 text-red-700'
-                            : 'bg-green-100 text-green-700'
-                        }`}>
-                          {result.groq_result.verdict === 'fake'
-                            ? (language === 'en' ? 'FAKE' : 'GIẢ')
-                            : (language === 'en' ? 'REAL' : 'THẬT')}
-                        </span>
-                        <p className="text-xl font-bold mt-2">
-                          {(result.groq_result.confidence * 100).toFixed(1)}%
-                        </p>
-                      </div>
-                      <p className="text-xs text-gray-600 line-clamp-3">
-                        {result.groq_result.reasoning}
-                      </p>
-                    </div>
-                  )}
-
-
+                  </div>
+                  
+                  <div className="border-t-2 pt-5">
+                    <p className="text-base font-semibold text-gray-700 mb-3">
+                      {language === 'en' ? 'Analysis:' : 'Phân tích:'}
+                    </p>
+                    <p className="text-base text-gray-700 leading-relaxed">
+                      {result.groq_result.reasoning}
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
@@ -380,17 +355,18 @@ export default function Detector() {
             {/* Combined Result with Voting */}
             {result.combined_result && (
               <div className="bg-gradient-to-r from-yellow-50 via-orange-50 to-red-50 rounded-lg shadow-2xl p-6 border-4 border-yellow-300">
-                <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
                   🎯 {language === 'en' ? 'Final Verdict (Majority Voting)' : 'Kết luận cuối cùng (Bỏ phiếu đa số)'}
                 </h2>
 
-                <div className="grid grid-cols-3 gap-4 mb-6">
-                  <div className="bg-white rounded-lg p-4 text-center">
-                    <p className="text-sm text-gray-600 mb-1">
+                {/* Final Verdict and Confidence - 2 columns */}
+                <div className="grid grid-cols-2 gap-6 mb-6">
+                  <div className="bg-white rounded-lg p-6 text-center shadow-md">
+                    <p className="text-base text-gray-600 mb-3 font-medium">
                       {language === 'en' ? 'Final Verdict' : 'Kết luận'}
                     </p>
-                    <p className="text-2xl font-bold uppercase">
-                      <span className={`px-3 py-1 rounded-full ${
+                    <p className="text-3xl font-bold uppercase">
+                      <span className={`px-6 py-3 rounded-full ${
                         result.combined_result.verdict === 'fake'
                           ? 'bg-red-100 text-red-700'
                           : 'bg-green-100 text-green-700'
@@ -402,51 +378,42 @@ export default function Detector() {
                     </p>
                   </div>
 
-                  <div className="bg-white rounded-lg p-4 text-center">
-                    <p className="text-sm text-gray-600 mb-1">
+                  <div className="bg-white rounded-lg p-6 text-center shadow-md">
+                    <p className="text-base text-gray-600 mb-3 font-medium">
                       {language === 'en' ? 'Confidence' : 'Độ tin cậy'}
                     </p>
-                    <p className="text-3xl font-bold text-blue-600">
+                    <p className="text-5xl font-bold text-blue-600">
                       {(result.combined_result.confidence * 100).toFixed(1)}%
-                    </p>
-                  </div>
-
-                  <div className="bg-white rounded-lg p-4 text-center">
-                    <p className="text-sm text-gray-600 mb-1">
-                      {language === 'en' ? 'Agreement' : 'Đồng thuận'}
-                    </p>
-                    <p className="text-lg font-bold text-purple-600 uppercase">
-                      {result.combined_result.agreement === 'unanimous' ? '🎉 100%' : '📊 Majority'}
                     </p>
                   </div>
                 </div>
 
                 {/* Voting Breakdown */}
-                <div className="bg-white rounded-lg p-4 mb-4">
-                  <p className="text-sm font-semibold text-gray-700 mb-3">
+                <div className="bg-white rounded-lg p-5 mb-5 shadow-md">
+                  <p className="text-base font-semibold text-gray-700 mb-4">
                     📊 {language === 'en' ? 'Voting Results' : 'Kết quả bỏ phiếu'}
                   </p>
-                  <div className="flex items-center gap-4 mb-2">
+                  <div className="flex items-center gap-6">
                     <div className="flex-1">
-                      <div className="flex justify-between text-sm mb-1">
+                      <div className="flex justify-between text-base mb-2">
                         <span className="text-green-700 font-semibold">REAL</span>
-                        <span className="font-bold">{result.combined_result.real_votes}/{result.combined_result.total_votes}</span>
+                        <span className="font-bold text-lg">{result.combined_result.real_votes}/{result.combined_result.total_votes}</span>
                       </div>
-                      <div className="confidence-bar">
+                      <div className="confidence-bar h-4">
                         <div
-                          className="confidence-bar-fill bg-gradient-to-r from-green-500 to-green-600"
+                          className="confidence-bar-fill bg-gradient-to-r from-green-500 to-green-600 h-4"
                           style={{ width: `${(result.combined_result.real_votes / result.combined_result.total_votes) * 100}%` }}
                         />
                       </div>
                     </div>
                     <div className="flex-1">
-                      <div className="flex justify-between text-sm mb-1">
+                      <div className="flex justify-between text-base mb-2">
                         <span className="text-red-700 font-semibold">FAKE</span>
-                        <span className="font-bold">{result.combined_result.fake_votes}/{result.combined_result.total_votes}</span>
+                        <span className="font-bold text-lg">{result.combined_result.fake_votes}/{result.combined_result.total_votes}</span>
                       </div>
-                      <div className="confidence-bar">
+                      <div className="confidence-bar h-4">
                         <div
-                          className="confidence-bar-fill bg-gradient-to-r from-red-500 to-red-600"
+                          className="confidence-bar-fill bg-gradient-to-r from-red-500 to-red-600 h-4"
                           style={{ width: `${(result.combined_result.fake_votes / result.combined_result.total_votes) * 100}%` }}
                         />
                       </div>
@@ -454,38 +421,29 @@ export default function Detector() {
                   </div>
                 </div>
 
-                {/* Individual Verdicts */}
+                {/* Individual Verdicts - Larger and centered */}
                 {result.combined_result.breakdown && (
-                  <div className="bg-white rounded-lg p-4">
-                    <p className="text-sm font-semibold text-gray-700 mb-3">
+                  <div className="bg-white rounded-lg p-5 shadow-md">
+                    <p className="text-base font-semibold text-gray-700 mb-4">
                       {language === 'en' ? 'Individual Verdicts' : 'Kết luận từng mô hình'}
                     </p>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                    <div className="flex justify-center gap-8">
                       {result.combined_result.breakdown.bert && (
-                        <div className="text-center">
-                          <span className="text-gray-600">🤖 BERT</span>
-                          <p className={`font-bold ${result.combined_result.breakdown.bert.verdict === 'fake' ? 'text-red-600' : 'text-green-600'}`}>
+                        <div className="text-center px-8 py-4 bg-gray-50 rounded-lg">
+                          <span className="text-gray-600 text-base block mb-2">🤖 BERT</span>
+                          <p className={`font-bold text-2xl ${result.combined_result.breakdown.bert.verdict === 'fake' ? 'text-red-600' : 'text-green-600'}`}>
                             {result.combined_result.breakdown.bert.verdict.toUpperCase()}
                           </p>
                         </div>
                       )}
-                      {result.combined_result.breakdown.gemini && (
-                        <div className="text-center">
-                          <span className="text-gray-600">✨ Gemini</span>
-                          <p className={`font-bold ${result.combined_result.breakdown.gemini.verdict === 'fake' ? 'text-red-600' : 'text-green-600'}`}>
-                            {result.combined_result.breakdown.gemini.verdict.toUpperCase()}
-                          </p>
-                        </div>
-                      )}
                       {result.combined_result.breakdown.groq && (
-                        <div className="text-center">
-                          <span className="text-gray-600">⚡ Groq</span>
-                          <p className={`font-bold ${result.combined_result.breakdown.groq.verdict === 'fake' ? 'text-red-600' : 'text-green-600'}`}>
+                        <div className="text-center px-8 py-4 bg-gray-50 rounded-lg">
+                          <span className="text-gray-600 text-base block mb-2">⚡ Groq</span>
+                          <p className={`font-bold text-2xl ${result.combined_result.breakdown.groq.verdict === 'fake' ? 'text-red-600' : 'text-green-600'}`}>
                             {result.combined_result.breakdown.groq.verdict.toUpperCase()}
                           </p>
                         </div>
                       )}
-
                     </div>
                   </div>
                 )}
