@@ -16,7 +16,7 @@ Hệ thống phát hiện tin giả toàn diện sử dụng BERT models, hỗ t
 ### 🤖 AI Models
 - **RoBERTa** (English) - Fine-tuned for fake news detection (92%+ accuracy)
 - **PhoBERT** (Vietnamese) - Fine-tuned on Vietnamese news dataset (92%+ accuracy)
-- **AI Verification** - Optional cross-verification with Gemini & Groq (100% FREE)
+- **Groq AI** - Optional cross-verification with Groq's Llama 3.1 (100% FREE)
 - **MC Dropout** - Uncertainty estimation for predictions
 
 ### 👥 User Management
@@ -241,7 +241,7 @@ Follow the checklist in `TEST_CHECKLIST_V1.0.md`
 ## 💡 Tips & Best Practices
 
 - **Security:** Generate strong SECRET_KEY: `openssl rand -hex 32`
-- **AI Verification:** Enable Gemini (FREE) in `.env` for cross-verification
+- **Groq AI:** Get free API key from https://console.groq.com/ and add to `.env`
 - **Database:** Use MongoDB Compass to visualize data
 - **Logs:** Check `api/api.log` for debugging
 - **Performance:** Use GPU for faster inference
@@ -321,15 +321,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **FastAPI** for the amazing web framework
 - **Next.js** for the frontend framework
 - **MongoDB** for the database
-
----
-
-## 📞 Support
-
-For issues, questions, or suggestions:
-- Create an issue on GitHub
-- Check the documentation at http://localhost:8000/docs
-- Review `TEST_CHECKLIST_V1.0.md` for testing guidelines
 
 ---
 
