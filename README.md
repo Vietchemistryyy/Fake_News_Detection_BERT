@@ -9,6 +9,12 @@ Hệ thống phát hiện tin giả toàn diện sử dụng BERT models, hỗ t
 [![Next.js](https://img.shields.io/badge/Next.js-14-black.svg)](https://nextjs.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+## 🎥 Demo Video
+
+[![Watch Demo](https://img.shields.io/badge/▶️_Watch_Demo-YouTube-red?style=for-the-badge&logo=youtube)](https://youtu.be/9RmSw6CzblE)
+
+**[👉 Xem video demo đầy đủ tại đây](https://youtu.be/9RmSw6CzblE)**
+
 ---
 
 ## 🎯 Tính năng chính
@@ -59,43 +65,90 @@ Hệ thống phát hiện tin giả toàn diện sử dụng BERT models, hỗ t
 
 ---
 
-## Quick Start
+## ⚡ Quick Start
 
-### 1. Clone Repository
+### Option 1: Automatic Setup (Recommended)
 
+**Windows:**
 ```bash
 git clone https://github.com/Vietchemistryyy/Fake_News_Detection_BERT.git
 cd Fake_News_Detection_BERT
+scripts\setup.bat
 ```
 
-### 2. Install Dependencies
-
+**Linux/Mac:**
 ```bash
-# Backend dependencies
 pip install -r requirements.txt
 
 # Frontend dependencies
 cd fe && npm install && cd ..
 ```
 
-### 3. Download Models
-
-**Option A: Download from Hugging Face (Recommended)**
+### 3. Configure Environment
 
 ```bash
-# Download fine-tuned models (~1GB, 5-10 minutes)
+# Copy example environment file
+cp api/.env.example api/.env
+
+# Generate SECRET_KEY
+python -c "import secrets; print(secrets.token_hex(32))"
+
+# Edit api/.env and paste the SECRET_KEY
+```
+
+**Optional: Add Groq AI (FREE)**
+- Get free API key: https://console.groq.com/
+- Add to `api/.env`:
+  ```env
+  ENABLE_GROQ=true
+  GROQ_API_KEY=your-key-here
+  ```
+
+### 4. Download Models
+
+```bash
+# Download fine-tuned models (~1GB)
 python download_models.py
 ```
 
-This will download:
+This downloads:
 - **RoBERTa** (English) - 92%+ accuracy
 - **PhoBERT** (Vietnamese) - 92%+ accuracy
 
-**Option B: Manual Download**
+### 5. Run Application
 
-Visit Hugging Face and download manually:
-- [RoBERTa Model](https://huggingface.co/Vietchemistryyy/fake-news-roberta-english)
-- [PhoBERT Model](https://huggingface.co/Vietchemistryyy/fake-news-phobert-vietnamese)
+**Backend:**
+```bash
+cd api
+uvicorn main:app --reload
+```
+
+**Frontend:**
+```bash
+cd fe
+npm run dev
+```
+
+Visit: http://localhost:3000
+
+---
+
+## 📖 Detailed Setup
+
+See [SETUP.md](SETUP.md) for complete setup instructions including:
+- MongoDB configuration
+- Groq AI setup
+- Troubleshooting
+- Production deployment
+
+---
+
+## 🎯 Quick Tips
+
+- **Security:** Generate strong SECRET_KEY: `openssl rand -hex 32`
+- **Groq AI:** Get free API key from https://console.groq.com/
+- **Database:** Use MongoDB Compass to visualize data
+- **Logs:** Check `api/api.log` for debugging
 
 Extract to:
 - `models/BERT/`
@@ -325,3 +378,70 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 **🛡️ Fighting fake news with AI - One prediction at a time**
+
+
+---
+
+## 📸 Screenshots & Demo
+
+### 🎥 Video Demo
+
+<div align="center">
+  <a href="https://youtu.be/9RmSw6CzblE">
+    <img src="https://img.youtube.com/vi/9RmSw6CzblE/maxresdefault.jpg" alt="Fake News Detection Demo" width="700"/>
+  </a>
+  <p><b>👆 Click để xem video demo đầy đủ</b></p>
+  <p>
+    <a href="https://youtu.be/9RmSw6CzblE">
+      <img src="https://img.shields.io/badge/▶️_Watch_on-YouTube-red?style=for-the-badge&logo=youtube" alt="Watch on YouTube"/>
+    </a>
+  </p>
+</div>
+
+### ✨ Key Features Showcase
+
+- ✅ **Multi-language Detection** - English & Vietnamese support
+- ✅ **Real-time Analysis** - Instant fake news detection
+- ✅ **AI Cross-verification** - Groq AI for second opinion
+- ✅ **User Dashboard** - Track your analysis history
+- ✅ **Admin Panel** - Manage users and monitor system
+- ✅ **Confidence Scores** - Know how certain the model is
+- ✅ **Detailed Breakdown** - See individual model verdicts
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 👨‍💻 Author
+
+**Vietchemistryyy**
+
+- GitHub: [@Vietchemistryyy](https://github.com/Vietchemistryyy)
+- Project: [Fake News Detection BERT](https://github.com/Vietchemistryyy/Fake_News_Detection_BERT)
+
+---
+
+## 🙏 Acknowledgments
+
+- [Hugging Face](https://huggingface.co/) for Transformers library
+- [FastAPI](https://fastapi.tiangolo.com/) for the amazing web framework
+- [Next.js](https://nextjs.org/) for the frontend framework
+- [Groq](https://groq.com/) for free AI API access
+- Community contributors and testers
+
+---
+
+<div align="center">
+  <p><b>⭐ If you find this project useful, please give it a star! ⭐</b></p>
+  <p>Made with ❤️ by Vietchemistryyy</p>
+</div>
