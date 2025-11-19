@@ -20,13 +20,7 @@ PORT = int(os.getenv("API_PORT", "8000"))
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:3001").split(",")
 
-# AI Verification APIs configuration (FREE only)
-# Gemini (FREE, recommended)
-GEMINI_API_KEY: Optional[str] = os.getenv("GEMINI_API_KEY")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
-ENABLE_GEMINI = os.getenv("ENABLE_GEMINI", "false").lower() == "true"
-
-# Groq (FREE, fast)
+# Groq AI configuration (FREE)
 GROQ_API_KEY: Optional[str] = os.getenv("GROQ_API_KEY")
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
 ENABLE_GROQ = os.getenv("ENABLE_GROQ", "false").lower() == "true"

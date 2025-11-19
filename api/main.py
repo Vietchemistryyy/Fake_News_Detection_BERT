@@ -20,13 +20,6 @@ from models_pydantic import (
 
 # Import AI verifiers (FREE only)
 try:
-    from gemini_verifier import GeminiVerifier
-    GEMINI_AVAILABLE = True
-except ImportError:
-    GEMINI_AVAILABLE = False
-    GeminiVerifier = None
-
-try:
     from groq_verifier import GroqVerifier
     GROQ_AVAILABLE = True
 except ImportError:
@@ -39,7 +32,6 @@ logger = logging.getLogger(__name__)
 
 # Global model and verifier instances
 model_loader: Optional[ModelLoader] = None
-gemini_verifier: Optional[GeminiVerifier] = None
 groq_verifier: Optional[GroqVerifier] = None
 active_verifier = None  # Will be set to the first available verifier
 
@@ -88,7 +80,7 @@ def combine_all_verdicts(bert_result: dict, ai_results: list) -> dict:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage model loading on startup."""
-    global model_loader, gemini_verifier, groq_verifier, active_verifier
+    global model_loader, groq_verifier, active_verifier
     
     # Connect to MongoDB
     logger.info("Connecting to MongoDB...")
@@ -116,29 +108,16 @@ async def lifespan(app: FastAPI):
         logger.warning(f"Vietnamese model not loaded: {e}")
         logger.warning("Vietnamese predictions will not be available")
     
-    # Initialize AI verifiers (FREE only)
-    logger.info("Initializing AI verifiers...")
-    
-    # Gemini (recommended, free)
-    if GEMINI_AVAILABLE and GeminiVerifier:
-        gemini_verifier = GeminiVerifier()
-        if gemini_verifier.enabled:
-            logger.info("✓ Gemini verifier enabled (FREE)")
-            if not active_verifier:
-                active_verifier = gemini_verifier
-    
-    # Groq (fast, free)
+    # Initialize Groq AI (optional)
     if GROQ_AVAILABLE and GroqVerifier:
         groq_verifier = GroqVerifier()
         if groq_verifier.enabled:
-            logger.info("✓ Groq verifier enabled (FREE)")
-            if not active_verifier:
-                active_verifier = groq_verifier
-    
-    if not active_verifier:
-        logger.warning("⚠ No AI verifier enabled - only BERT will be used")
+            logger.info("✓ Groq AI enabled (FREE)")
+            active_verifier = groq_verifier
+        else:
+            logger.info("ℹ Groq AI disabled - only BERT will be used")
     else:
-        logger.info(f"✓ Active verifier: {active_verifier.__class__.__name__}")
+        logger.info("ℹ Groq AI not available - only BERT will be used")
     
     logger.info("✓ API startup complete")
     
@@ -151,7 +130,7 @@ async def lifespan(app: FastAPI):
 # Create FastAPI app
 app = FastAPI(
     title="Fake News Detection API",
-    description="BERT + AI (Gemini & Groq) powered fake news detection system - 100% FREE",
+    description="BERT + Groq AI powered fake news detection system - 100% FREE",
     version="1.0.0",
     lifespan=lifespan
 )
@@ -177,14 +156,14 @@ class BatchPredictRequest(BaseModel):
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
     """Health check endpoint."""
-    ai_available = False
-    if active_verifier:
-        ai_available = active_verifier.enabled
+    groq_available = False
+    if groq_verifier:
+        groq_available = groq_verifier.enabled
     
     return HealthResponse(
         status="ok" if model_loader else "error",
         models_loaded=model_loader.models_loaded if model_loader else {"en": False, "vi": False},
-        ai_verification_available=ai_available,
+        groq_available=groq_available,
         database_connected=db.connected,
         message="API is running"
     )
@@ -234,33 +213,18 @@ async def predict(
         )
         
         ai_result = None
-        gemini_result = None
         groq_result = None
         combined_result = None
         
-        # AI verification if requested - Run ALL enabled verifiers (FREE only)
-        if request.verify_with_ai:
-            ai_results = []
+        # Groq AI cross-verification if requested
+        if request.verify_with_ai and groq_verifier and groq_verifier.enabled:
+            logger.info("Cross-verifying with Groq AI...")
+            groq_result = groq_verifier.verify_news(text)
             
-            # Gemini
-            if gemini_verifier and gemini_verifier.enabled:
-                logger.info("Performing AI verification with Gemini...")
-                gemini_result = gemini_verifier.verify_news(text)
-                if gemini_result.get("is_available"):
-                    ai_results.append(("Gemini", gemini_result))
-            
-            # Groq
-            if groq_verifier and groq_verifier.enabled:
-                logger.info("Performing AI verification with Groq...")
-                groq_result = groq_verifier.verify_news(text)
-                if groq_result.get("is_available"):
-                    ai_results.append(("Groq", groq_result))
-            
-            # Combine results with majority voting
-            if ai_results:
+            if groq_result.get("is_available"):
+                # Combine BERT + Groq results
+                ai_results = [("Groq", groq_result)]
                 combined_result = combine_all_verdicts(bert_result, ai_results)
-                # Keep backward compatibility
-                ai_result = ai_results[0][1] if ai_results else None
         
         # Save to database if user is logged in
         if current_user:
@@ -298,7 +262,6 @@ async def predict(
             confidence=bert_result["confidence"],
             probabilities=bert_result["probabilities"],
             language=request.language,
-            gemini_result=gemini_result,
             groq_result=groq_result,
             combined_result=combined_result
         )
@@ -336,19 +299,21 @@ async def predict_batch(request: BatchPredictRequest):
             try:
                 bert_result = model_loader.predict(text)
                 
-                openai_result = None
+                groq_result = None
                 combined_result = None
                 
-                if request.verify_with_openai and openai_verifier:
-                    openai_result = openai_verifier.verify_news(text)
-                    if openai_result.get("is_available"):
-                        combined_result = OpenAIVerifier.combine_verdicts(bert_result, openai_result)
+                # Groq cross-verification for batch (if enabled)
+                if request.verify_with_openai and groq_verifier and groq_verifier.enabled:
+                    groq_result = groq_verifier.verify_news(text)
+                    if groq_result.get("is_available"):
+                        ai_results = [("Groq", groq_result)]
+                        combined_result = combine_all_verdicts(bert_result, ai_results)
                 
                 results.append({
                     "label": bert_result["label"],
                     "confidence": bert_result["confidence"],
                     "probabilities": bert_result["probabilities"],
-                    "openai_result": openai_result,
+                    "groq_result": groq_result,
                     "combined_result": combined_result
                 })
                 
@@ -380,7 +345,7 @@ async def get_model_info():
         "temperature": config.TEMPERATURE,
         "mc_dropout_enabled": config.MC_DROPOUT_ENABLED,
         "mc_dropout_iterations": config.MC_DROPOUT_ITERATIONS,
-        "ai_verification_available": active_verifier is not None,
+        "groq_available": groq_verifier.enabled if groq_verifier else False,
         "database_connected": db.connected
     }
 

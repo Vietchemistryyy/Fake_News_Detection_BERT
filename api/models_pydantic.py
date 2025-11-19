@@ -39,7 +39,6 @@ class PredictResponse(BaseModel):
     confidence: float
     probabilities: dict
     language: str
-    gemini_result: Optional[dict] = None
     groq_result: Optional[dict] = None
     combined_result: Optional[dict] = None
 
@@ -61,6 +60,6 @@ class QueryStatsResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     models_loaded: Dict[str, bool]
-    ai_verification_available: bool
+    groq_available: bool
     database_connected: bool
     message: str
