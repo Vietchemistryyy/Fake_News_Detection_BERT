@@ -27,7 +27,7 @@ class GroqVerifier:
             self.client = None
             logger.warning("Groq verifier disabled (no API key or ENABLE_GROQ=false)")
     
-    def verify_news(self, text: str) -> Dict[str, Any]:
+    def verify_news(self, text: str, language: str = "en") -> Dict[str, Any]:
         """Verify news article using Groq."""
         if not self.enabled:
             return self._default_response()
@@ -35,7 +35,25 @@ class GroqVerifier:
         try:
             truncated_text = truncate_text(text, 500)
             
-            system_prompt = """You are a neutral fact-checking assistant. Analyze the given news article objectively.
+            # Choose prompt based on language
+            if language == "vi":
+                system_prompt = """Bạn là trợ lý kiểm tra sự thật trung lập. Phân tích bài báo một cách khách quan.
+
+HƯỚNG DẪN QUAN TRỌNG:
+1. KHÔNG cho rằng bài báo là giả chỉ vì thiếu nguồn trích dẫn
+2. Các bài báo hợp pháp thường tóm tắt mà không liệt kê nguồn
+3. Chỉ đánh dấu "fake" nếu bạn tìm thấy thông tin sai lệch rõ ràng hoặc tuyên bố bịa đặt
+4. Nếu nội dung có vẻ hợp lý nhưng không thể xác minh, hãy nghiêng về "real" với độ tin cậy thấp hơn
+
+Trả lời CHỈ bằng JSON hợp lệ (không markdown, không văn bản thêm) và PHẢI bằng tiếng Việt:
+{
+    "verdict": "real" hoặc "fake",
+    "confidence": 0.0 đến 1.0,
+    "reasoning": "Giải thích ngắn gọn bằng tiếng Việt",
+    "concerns": ["mối quan ngại 1", "mối quan ngại 2"]
+}"""
+            else:  # English
+                system_prompt = """You are a neutral fact-checking assistant. Analyze the given news article objectively.
 
 IMPORTANT GUIDELINES:
 1. Do NOT assume an article is fake just because it lacks sources
@@ -47,7 +65,7 @@ Respond ONLY with valid JSON (no markdown, no extra text):
 {
     "verdict": "real" or "fake",
     "confidence": 0.0 to 1.0,
-    "reasoning": "Brief explanation",
+    "reasoning": "Brief explanation in English",
     "concerns": ["concern1", "concern2"]
 }"""
 
