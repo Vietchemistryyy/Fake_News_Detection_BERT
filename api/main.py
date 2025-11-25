@@ -235,7 +235,7 @@ async def predict(
         # Groq AI cross-verification if requested
         if request.verify_with_ai and groq_verifier and groq_verifier.enabled:
             logger.info("Cross-verifying with Groq AI...")
-            groq_result = groq_verifier.verify_news(text)
+            groq_result = groq_verifier.verify_news(text, language=request.language)
             
             if groq_result.get("is_available"):
                 # Combine BERT + Groq results
@@ -320,7 +320,7 @@ async def predict_batch(request: BatchPredictRequest):
                 
                 # Groq cross-verification for batch (if enabled)
                 if request.verify_with_openai and groq_verifier and groq_verifier.enabled:
-                    groq_result = groq_verifier.verify_news(text)
+                    groq_result = groq_verifier.verify_news(text, language=request.language)
                     if groq_result.get("is_available"):
                         ai_results = [("Groq", groq_result)]
                         combined_result = combine_all_verdicts(bert_result, ai_results)
