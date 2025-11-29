@@ -1,6 +1,5 @@
 # 🛡️ Fake News Detection System v1.0
 
-> AI-Powered Multi-Language News Verification System
 
 Hệ thống phát hiện tin giả toàn diện sử dụng BERT models, hỗ trợ đa ngôn ngữ (English/Vietnamese) với admin dashboard và query history tracking.
 
