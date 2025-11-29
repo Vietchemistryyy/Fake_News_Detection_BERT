@@ -1,159 +1,94 @@
-# 🛡️ Fake News Detection System v1.0
+# Fake News Detection with BERT
 
+A fake news detection system that actually works. Built with BERT models for both English and Vietnamese news articles.
 
-Hệ thống phát hiện tin giả toàn diện sử dụng BERT models, hỗ trợ đa ngôn ngữ (English/Vietnamese) với admin dashboard và query history tracking.
+[Watch the demo](https://youtu.be/9RmSw6CzblE) if you want to see it in action.
 
-[![Python](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com/)
-[![Next.js](https://img.shields.io/badge/Next.js-14-black.svg)](https://nextjs.org/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+## What is this?
 
-## 🎥 Demo Video
+Basically, you paste in a news article and the system tells you if it's likely fake or real. It uses two fine-tuned BERT models:
+- RoBERTa for English (92% accuracy)
+- PhoBERT for Vietnamese (92% accuracy)
 
-[![Watch Demo](https://img.shields.io/badge/▶️_Watch_Demo-YouTube-red?style=for-the-badge&logo=youtube)](https://youtu.be/9RmSw6CzblE)
+There's also an optional Groq AI integration for cross-verification, which is completely free.
 
-**[👉 Xem video demo đầy đủ tại đây](https://youtu.be/9RmSw6CzblE)**
+## Features
 
----
+**For users:**
+- Detect fake news in English or Vietnamese
+- See confidence scores and detailed breakdowns
+- Track your analysis history
+- Get AI cross-verification (optional)
 
-## 🎯 Tính năng chính
-
-### 🤖 AI Models
-- **RoBERTa** (English) - Fine-tuned for fake news detection (92%+ accuracy)
-- **PhoBERT** (Vietnamese) - Fine-tuned on Vietnamese news dataset (92%+ accuracy)
-- **Groq AI** - Optional cross-verification with Groq's Llama 3.1 (100% FREE)
-- **MC Dropout** - Uncertainty estimation for predictions
-
-### 👥 User Management
-- **Authentication** - JWT-based secure authentication
-- **User Roles** - Regular users and admin roles
-- **Query History** - Track all predictions with statistics
-- **Personal Dashboard** - View your analysis history
-
-### 🛡️ Admin Dashboard
-- **System Statistics** - Monitor total users, queries, and predictions
-- **User Management** - CRUD operations for users (Create, Read, Update, Delete)
-- **Query Monitoring** - View all system queries in real-time
-- **Role Management** - Promote/demote users to admin
-
-### 🌍 Multi-Language Support
-- English news detection using RoBERTa
-- Vietnamese news detection using PhoBERT
-- Automatic language detection
-- Separate models for optimal accuracy
-
----
+**For admins:**
+- User management dashboard
+- Search and filter users
+- View system statistics
+- Monitor all queries
 
 ## Tech Stack
 
-**Backend:** FastAPI, PyTorch, Transformers, MongoDB  
-**Frontend:** Next.js, Tailwind CSS  
-**Models:** RoBERTa (English), PhoBERT (Vietnamese)
+- **Backend:** FastAPI + PyTorch + Transformers
+- **Frontend:** Next.js + Tailwind CSS
+- **Database:** MongoDB
+- **Models:** RoBERTa (EN), PhoBERT (VI)
 
----
+## Quick Start
 
-## Cấu trúc
+### 1. Clone and Install
 
-```
-├── api/              # Backend
-├── fe/               # Frontend
-├── models/BERT/      # Trained models
-├── tests/            # Test scripts
-└── requirements.txt
-```
-
----
-
-## ⚡ Quick Start
-
-### Option 1: Automatic Setup (Recommended)
-
-**Windows:**
 ```bash
 git clone https://github.com/Vietchemistryyy/Fake_News_Detection_BERT.git
 cd Fake_News_Detection_BERT
-scripts\setup.bat
-```
 
-**Linux/Mac:**
-```bash
+# Install Python dependencies
 pip install -r requirements.txt
 
-# Frontend dependencies
+# Install frontend dependencies
 cd fe && npm install && cd ..
 ```
 
-### 3. Configure Environment
+### 2. Download Models
 
 ```bash
-# Copy example environment file
-cp api/.env.example api/.env
-
-# Generate SECRET_KEY
-python -c "import secrets; print(secrets.token_hex(32))"
-
-# Edit api/.env and paste the SECRET_KEY
-```
-
-**Optional: Add Groq AI (FREE)**
-- Get free API key: https://console.groq.com/
-- Add to `api/.env`:
-  ```env
-  ENABLE_GROQ=true
-  GROQ_API_KEY=your-key-here
-  ```
-
-### 4. Download Models
-
-```bash
-# Download fine-tuned models (~1GB)
 python download_models.py
 ```
 
-This downloads:
-- **RoBERTa** (English) - 92%+ accuracy
-- **PhoBERT** (Vietnamese) - 92%+ accuracy
+This downloads the fine-tuned models (~1GB total). They'll go into `models/BERT/` and `models/PhoBERT/`.
 
-### 5. Run Application
+### 3. Setup Environment
 
-**Backend:**
-```bash
-cd api
-uvicorn main:app --reload
+Create `api/.env`:
+
+```env
+API_HOST=0.0.0.0
+API_PORT=8000
+MONGODB_URL=mongodb://localhost:27017/
+MONGODB_DB_NAME=fake_news_detection
+SECRET_KEY=your-secret-key-here
+MODEL_PATH=../models/BERT
+PHOBERT_MODEL_PATH=../models/PhoBERT
+CORS_ORIGINS=http://localhost:3000
 ```
 
-**Frontend:**
+Generate a secret key:
 ```bash
-cd fe
-npm run dev
+python -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-Visit: http://localhost:3000
+**Optional - Add Groq AI (free):**
+Get an API key from [console.groq.com](https://console.groq.com/) and add:
+```env
+ENABLE_GROQ=true
+GROQ_API_KEY=your-key-here
+```
 
----
+Create `fe/.env.local`:
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
 
-## 📖 Detailed Setup
-
-See [SETUP.md](SETUP.md) for complete setup instructions including:
-- MongoDB configuration
-- Groq AI setup
-- Troubleshooting
-- Production deployment
-
----
-
-## 🎯 Quick Tips
-
-- **Security:** Generate strong SECRET_KEY: `openssl rand -hex 32`
-- **Groq AI:** Get free API key from https://console.groq.com/
-- **Database:** Use MongoDB Compass to visualize data
-- **Logs:** Check `api/api.log` for debugging
-
-Extract to:
-- `models/BERT/`
-- `models/PhoBERT/`
-
-### 4. Setup MongoDB
+### 4. Start MongoDB
 
 ```bash
 # Windows
@@ -166,281 +101,149 @@ brew services start mongodb-community
 sudo systemctl start mongod
 ```
 
-### 5. Configure
+### 5. Run the App
 
-**api/.env:**
-```bash
-API_HOST=0.0.0.0
-API_PORT=8000
-MONGODB_URL=mongodb://localhost:27017/
-MONGODB_DB_NAME=fake_news_detection
-SECRET_KEY=your-secret-key-here
-MODEL_PATH=../models/BERT
-CORS_ORIGINS=http://localhost:3000
-```
-
-Generate SECRET_KEY: `openssl rand -hex 32`
-
-**fe/.env.local:**
-```bash
-NEXT_PUBLIC_API_URL=http://localhost:8000
-```
-
-### 6. Run
+Open two terminals:
 
 ```bash
 # Terminal 1 - Backend
-cd api && python main.py
-
-# Terminal 2 - Frontend
-cd fe && npm run dev
+cd api
+python main.py
 ```
 
-### 7. Access
+```bash
+# Terminal 2 - Frontend
+cd fe
+npm run dev
+```
 
-- Web: http://localhost:3000
-- API Docs: http://localhost:8000/docs
+Visit http://localhost:3000
 
----
+## Project Structure
 
-## Fine-tuning PhoBERT với VFND Dataset
+```
+├── api/              # FastAPI backend
+├── fe/               # Next.js frontend
+├── models/           # Trained BERT models
+│   ├── BERT/        # RoBERTa (English)
+│   └── PhoBERT/     # PhoBERT (Vietnamese)
+├── tests/            # Test scripts
+└── notebooks/        # Training notebooks
+```
 
-### 🚀 Google Colab (FREE GPU T4!)
+## How to Use
 
-1. Mở `notebooks/05_PHOBERT_VFND_COLAB.txt`
-2. Copy từng cell vào Google Colab
-3. Chạy tuần tự (1-2 giờ)
-4. Download model từ Google Drive về `models/PhoBERT_VFND/`
-5. Update `api/.env`: `PHOBERT_MODEL_PATH=../models/PhoBERT_VFND`
-6. Restart API: `cd api && python main.py`
+**As a regular user:**
+1. Register an account
+2. Login
+3. Select language (English or Vietnamese)
+4. Paste your news article (10-5000 characters)
+5. Click analyze
+6. Check your history anytime
 
----
+**As an admin:**
+- Login with admin credentials (default: admin/123456)
+- Access the admin dashboard
+- Manage users, view stats, monitor queries
+
+## API Endpoints
+
+Full docs at http://localhost:8000/docs when running.
+
+**Auth:**
+- `POST /auth/register` - Create account
+- `POST /auth/login` - Login
+- `GET /auth/me` - Get current user
+
+**Detection:**
+- `POST /predict` - Analyze news article
+- `POST /predict-batch` - Batch analysis
+
+**History:**
+- `GET /history` - Your query history
+- `GET /history/stats` - Your statistics
+
+**Admin:**
+- `GET /admin/users` - List all users
+- `GET /admin/stats` - System stats
+- `PUT /admin/users/{id}` - Update user
+- `DELETE /admin/users/{id}` - Delete user
+
+## Fine-tuning PhoBERT
+
+If you want to train your own Vietnamese model:
+
+1. Open `notebooks/05_PHOBERT_VFND_COLAB.txt`
+2. Copy the code into Google Colab (free T4 GPU!)
+3. Run it (takes 1-2 hours)
+4. Download the trained model
+5. Update your `.env` file
 
 ## Testing
 
 ```bash
+# Test the system
 python tests/test_system.py
+
+# Test MongoDB connection
 python tests/test_mongodb.py
+
+# Test API endpoints
 python tests/test_api.py
 ```
 
----
-
-## 📖 Usage Guide
-
-### Regular User Flow
-1. **Register** at http://localhost:3000
-2. **Login** with your credentials
-3. **Select language** (English or Vietnamese)
-4. **Paste news content** (10-5000 characters)
-5. **Analyze** and get instant results
-6. **View history** to track your queries
-
-### Admin Flow
-1. **Login** with admin credentials (admin/123456)
-2. **Monitor system** statistics
-3. **Manage users** - view, update roles, delete
-4. **View all queries** across the system
-5. **System administration** tasks
-
----
-
-## 🔌 API Endpoints
-
-### Authentication
-- `POST /auth/register` - Register new user
-- `POST /auth/login` - Login user
-- `GET /auth/me` - Get current user info
-
-### Prediction
-- `POST /predict` - Analyze news (supports EN/VI)
-- `POST /predict-batch` - Batch prediction
-
-### History
-- `GET /history` - Get user query history
-- `GET /history/stats` - Get user statistics
-
-### Admin (Admin only)
-- `GET /admin/users` - Get all users
-- `GET /admin/stats` - Get system statistics
-- `GET /admin/queries` - Get all queries
-- `PUT /admin/users/{id}` - Update user
-- `DELETE /admin/users/{id}` - Delete user
-
-**Full API Documentation:** http://localhost:8000/docs
-
----
-
-## 🧪 Testing
-
-### Automated Tests
-```bash
-# Test admin functionality
-python test_admin.py
-
-# Test PhoBERT model
-python test_phobert_model.py
-
-# Test history API
-python quick_test.py
-```
-
-### Manual Testing
-Follow the checklist in `TEST_CHECKLIST_V1.0.md`
-
----
-
-## 💡 Tips & Best Practices
-
-- **Security:** Generate strong SECRET_KEY: `openssl rand -hex 32`
-- **Groq AI:** Get free API key from https://console.groq.com/ and add to `.env`
-- **Database:** Use MongoDB Compass to visualize data
-- **Logs:** Check `api/api.log` for debugging
-- **Performance:** Use GPU for faster inference
-- **Backup:** Regularly backup MongoDB database
-
----
-
-## 🐛 Troubleshooting
-
-### Common Issues
+## Common Issues
 
 **Backend won't start:**
-- Check if MongoDB is running: `net start MongoDB` (Windows)
-- Verify port 8000 is available
-- Check `api/api.log` for errors
+- Make sure MongoDB is running
+- Check if port 8000 is free
+- Look at `api/api.log` for errors
 
 **Frontend won't start:**
-- Verify port 3000 is available
-- Run `npm install` in `fe/` directory
-- Check `.env.local` configuration
+- Check if port 3000 is available
+- Try `npm install` again
+- Verify `.env.local` exists
 
-**Predictions fail:**
-- Ensure models are in `models/BERT/` and `models/PhoBERT/`
-- Check if all model files are present (config.json, model files, tokenizer files)
-- Verify GPU/CPU availability
+**Models not loading:**
+- Confirm models are in `models/BERT/` and `models/PhoBERT/`
+- Check if all files downloaded correctly
+- Make sure you have enough RAM (8GB minimum)
 
-**History not working:**
-- Ensure MongoDB is running and connected
-- Check if user is logged in
-- Verify token is valid
+**Predictions failing:**
+- Verify MongoDB is connected
+- Check if you're logged in
+- Make sure the text is between 10-5000 characters
 
-See `TROUBLESHOOTING.md` for detailed solutions.
+## Requirements
 
----
+- Python 3.12+
+- Node.js 18+
+- MongoDB 4.4+
+- 8GB RAM minimum (16GB recommended)
+- ~5GB disk space for models
 
-## 📊 System Requirements
+GPU is optional but speeds things up.
 
-- **Python:** 3.12+
-- **Node.js:** 18+
-- **MongoDB:** 4.4+
-- **RAM:** 8GB minimum (16GB recommended)
-- **Storage:** 5GB for models and data
-- **GPU:** Optional (CUDA-compatible for faster inference)
+## Contributing
 
----
+Feel free to open issues or submit PRs. The code could definitely use some improvements.
 
-## 🤝 Contributing
+## License
 
-We welcome contributions! Please follow these steps:
+MIT License - do whatever you want with it.
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+## Credits
 
----
+Built by [@Vietchemistryyy](https://github.com/Vietchemistryyy)
 
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Thanks to:
+- Hugging Face for the Transformers library
+- VinAI for PhoBERT
+- FastAPI and Next.js teams
+- Groq for free AI API access
 
 ---
 
-## 👨‍💻 Author
+If this helped you, give it a star ⭐
 
-**Nguyen Quoc Viet**
-
-© 2025 Nguyen Quoc Viet. All rights reserved.
-
----
-
-## 🙏 Acknowledgments
-
-- **Hugging Face** for Transformers library
-- **VinAI** for PhoBERT model
-- **FastAPI** for the amazing web framework
-- **Next.js** for the frontend framework
-- **MongoDB** for the database
-
----
-
-**🛡️ Fighting fake news with AI - One prediction at a time**
-
-
----
-
-## 📸 Screenshots & Demo
-
-### 🎥 Video Demo
-
-<div align="center">
-  <a href="https://youtu.be/9RmSw6CzblE">
-    <img src="https://img.youtube.com/vi/9RmSw6CzblE/maxresdefault.jpg" alt="Fake News Detection Demo" width="700"/>
-  </a>
-  <p><b>👆 Click để xem video demo đầy đủ</b></p>
-  <p>
-    <a href="https://youtu.be/9RmSw6CzblE">
-      <img src="https://img.shields.io/badge/▶️_Watch_on-YouTube-red?style=for-the-badge&logo=youtube" alt="Watch on YouTube"/>
-    </a>
-  </p>
-</div>
-
-### ✨ Key Features Showcase
-
-- ✅ **Multi-language Detection** - English & Vietnamese support
-- ✅ **Real-time Analysis** - Instant fake news detection
-- ✅ **AI Cross-verification** - Groq AI for second opinion
-- ✅ **User Dashboard** - Track your analysis history
-- ✅ **Admin Panel** - Manage users and monitor system
-- ✅ **Confidence Scores** - Know how certain the model is
-- ✅ **Detailed Breakdown** - See individual model verdicts
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 👨‍💻 Author
-
-**Vietchemistryyy**
-
-- GitHub: [@Vietchemistryyy](https://github.com/Vietchemistryyy)
-- Project: [Fake News Detection BERT](https://github.com/Vietchemistryyy/Fake_News_Detection_BERT)
-
----
-
-## 🙏 Acknowledgments
-
-- [Hugging Face](https://huggingface.co/) for Transformers library
-- [FastAPI](https://fastapi.tiangolo.com/) for the amazing web framework
-- [Next.js](https://nextjs.org/) for the frontend framework
-- [Groq](https://groq.com/) for free AI API access
-- Community contributors and testers
-
----
-
-<div align="center">
-  <p><b>⭐ If you find this project useful, please give it a star! ⭐</b></p>
-  <p>Made with ❤️ by Vietchemistryyy</p>
-</div>
+Made with ❤️ and lots of coffee
