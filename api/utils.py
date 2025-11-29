@@ -20,6 +20,33 @@ def clean_text(text: str) -> str:
     
     return text
 
+def detect_language(text: str) -> str:
+    """
+    Detect language of text (Vietnamese or English)
+    
+    Args:
+        text: Input text
+        
+    Returns:
+        'vi' for Vietnamese, 'en' for English
+    """
+    if not text:
+        return 'en'
+    
+    # Vietnamese specific characters
+    vietnamese_chars = 'àáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵđ'
+    vietnamese_chars += vietnamese_chars.upper()
+    
+    # Count Vietnamese characters
+    viet_count = sum(1 for c in text if c in vietnamese_chars)
+    
+    # If more than 5% of characters are Vietnamese, classify as Vietnamese
+    if len(text) > 0 and (viet_count / len(text)) > 0.05:
+        return 'vi'
+    
+    return 'en'
+
+
 def truncate_text(text: str, max_length: int = 500) -> str:
     """Truncate text for OpenAI API (token limit considerations)."""
     if len(text) <= max_length:

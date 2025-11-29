@@ -11,6 +11,7 @@ from utils import clean_text, setup_logging
 from database import db
 import auth
 from middleware import get_current_user, get_current_user_optional, get_current_admin, security
+from url_scraper import scrape_url
 from models_pydantic import (
     UserRegister, UserLogin, Token,
     PredictRequest, PredictResponse,
@@ -286,6 +287,121 @@ async def predict(
             confidence=bert_result["confidence"],
             probabilities=bert_result["probabilities"],
             language=request.language,
+            groq_result=groq_result,
+            combined_result=combined_result
+        )
+        
+    except Exception as e:
+        logger.error(f"Prediction error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/predict-url", response_model=PredictResponse)
+async def predict_from_url(
+    url: str,
+    mc_dropout: bool = False,
+    verify_with_ai: bool = False,
+    current_user: dict = Depends(get_current_user_optional)
+):
+    """Predict from URL - scrapes article and analyzes it."""
+    if not model_loader:
+        raise HTTPException(status_code=503, detail="Model not loaded")
+    
+    # Scrape URL
+    logger.info(f"Scraping URL: {url}")
+    scrape_result = await scrape_url(url, timeout=10)
+    
+    if not scrape_result["success"]:
+        logger.error(f"Scraping failed: {scrape_result['error']}")
+        raise HTTPException(
+            status_code=422,
+            detail=scrape_result["error"] or "Cannot access this URL. Please paste the content manually."
+        )
+    
+    text = scrape_result["text"]
+    logger.info(f"Scraped {len(text)} characters using method: {scrape_result['method']}")
+    
+    # Detect language
+    from utils import detect_language
+    language = detect_language(text)
+    logger.info(f"Detected language: {language}")
+    
+    # Check if model for language is loaded
+    if not model_loader.models_loaded.get(language):
+        raise HTTPException(
+            status_code=503,
+            detail=f"Model for language '{language}' not loaded"
+        )
+    
+    # Validate text length
+    if len(text) < config.MIN_TEXT_LENGTH:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Extracted text too short (minimum {config.MIN_TEXT_LENGTH} characters)"
+        )
+    if len(text) > config.MAX_TEXT_LENGTH:
+        # Truncate if too long
+        text = text[:config.MAX_TEXT_LENGTH]
+        logger.warning(f"Text truncated to {config.MAX_TEXT_LENGTH} characters")
+    
+    try:
+        # BERT prediction
+        bert_result = model_loader.predict(
+            text,
+            language=language,
+            mc_dropout=mc_dropout
+        )
+        
+        ai_result = None
+        groq_result = None
+        combined_result = None
+        
+        # Groq AI cross-verification if requested
+        if verify_with_ai and groq_verifier and groq_verifier.enabled:
+            logger.info("Cross-verifying with Groq AI...")
+            groq_result = groq_verifier.verify_news(text, language=language)
+            
+            if groq_result.get("is_available"):
+                ai_results = [("Groq", groq_result)]
+                combined_result = combine_all_verdicts(bert_result, ai_results)
+        
+        # Save to database if user is logged in
+        if current_user:
+            logger.info(f"User authenticated: {current_user.get('username')}")
+            if db.connected:
+                try:
+                    final_label = combined_result["verdict"] if combined_result else bert_result["label"]
+                    final_confidence = combined_result["confidence"] if combined_result else bert_result["confidence"]
+                    
+                    query_id = db.save_query(
+                        user_id=current_user["_id"],
+                        text=text,
+                        language=language,
+                        prediction={
+                            "label": final_label,
+                            "confidence": final_confidence,
+                            "probabilities": bert_result["probabilities"],
+                            "bert_result": {
+                                "label": bert_result["label"],
+                                "confidence": bert_result["confidence"]
+                            },
+                            "groq_result": groq_result,
+                            "combined_result": combined_result,
+                            "mc_dropout": mc_dropout,
+                            "url": url,  # Save URL
+                            "scrape_method": scrape_result["method"],
+                            "metadata": scrape_result.get("metadata", {})
+                        }
+                    )
+                    if query_id:
+                        logger.info(f"✓ Query saved for user: {current_user['username']} (ID: {query_id})")
+                except Exception as e:
+                    logger.error(f"✗ Failed to save query: {e}")
+        
+        return PredictResponse(
+            label=bert_result["label"],
+            confidence=bert_result["confidence"],
+            probabilities=bert_result["probabilities"],
+            language=language,
             groq_result=groq_result,
             combined_result=combined_result
         )
