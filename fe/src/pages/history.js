@@ -15,7 +15,7 @@ export default function History() {
   useEffect(() => {
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
-    
+
     if (!token) {
       router.push('/login');
     } else {
@@ -78,26 +78,7 @@ export default function History() {
             <p className="text-gray-600">View your past predictions</p>
           </div>
           <div className="flex gap-4">
-            {user?.role === 'admin' && (
-              <a
-                href="/admin"
-                className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 font-semibold"
-              >
-                🛡️ Admin
-              </a>
-            )}
-            <a
-              href="/detector"
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-semibold"
-            >
-              New Detection
-            </a>
-            <button
-              onClick={handleLogout}
-              className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 font-semibold"
-            >
-              Logout
-            </button>
+            {/* Navigation handled by global header */}
           </div>
         </div>
 
@@ -137,7 +118,7 @@ export default function History() {
           <div className="p-6 border-b">
             <h2 className="text-xl font-bold text-gray-900">Recent Queries</h2>
           </div>
-          
+
           {queries.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
               <p>No queries yet. Start by analyzing some news!</p>
@@ -155,13 +136,17 @@ export default function History() {
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                          query.prediction.label === 'fake'
+                        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${(query.prediction.combined_result?.verdict || query.prediction.label) === 'fake'
                             ? 'bg-red-100 text-red-700'
                             : 'bg-green-100 text-green-700'
-                        }`}>
-                          {query.prediction.label.toUpperCase()}
+                          }`}>
+                          {(query.prediction.combined_result?.verdict || query.prediction.label).toUpperCase()}
                         </span>
+                        {query.prediction.combined_result && (
+                          <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded">
+                            🎯 Voting Result
+                          </span>
+                        )}
                         <span className="text-sm text-gray-500">
                           {query.language === 'en' ? 'Eng English' : '🇻🇳 Vietnamese'}
                         </span>
@@ -173,12 +158,12 @@ export default function History() {
                     </div>
                     <div className="ml-4 text-right">
                       <p className="text-2xl font-bold text-gray-900">
-                        {(query.prediction.confidence * 100).toFixed(1)}%
+                        {((query.prediction.combined_result?.confidence || query.prediction.confidence) * 100).toFixed(1)}%
                       </p>
                       <p className="text-xs text-gray-500">confidence</p>
                     </div>
                   </div>
-                  
+
                   {/* Probabilities */}
                   <div className="grid grid-cols-2 gap-4 mt-3">
                     <div>

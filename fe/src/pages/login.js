@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useRouter } from 'next/router';
 import axios from 'axios';
+import { useAuth } from '../contexts/AuthContext';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -9,7 +9,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -22,16 +22,9 @@ export default function Login() {
         password
       });
 
-      // Save token to localStorage
-      localStorage.setItem('token', response.data.access_token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+      // Use global login function
+      login(response.data.user, response.data.access_token);
 
-      // Redirect based on role
-      if (response.data.user.role === 'admin') {
-        router.push('/admin');
-      } else {
-        router.push('/detector');
-      }
     } catch (err) {
       setError(err.response?.data?.detail || 'Login failed. Please try again.');
     } finally {
@@ -40,7 +33,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-500 via-blue-600 to-purple-700 flex items-center justify-center py-12 px-4">
+    <div className="bg-gradient-to-br from-blue-500 via-blue-600 to-purple-700 flex items-center justify-center py-20 px-4 min-h-full">
       <div className="max-w-md w-full">
         <div className="bg-white rounded-lg shadow-2xl p-8">
           {/* Header */}

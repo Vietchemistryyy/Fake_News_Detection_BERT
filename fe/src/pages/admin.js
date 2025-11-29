@@ -20,28 +20,28 @@ export default function AdminDashboard() {
   useEffect(() => {
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
-    
+
     if (!token) {
       router.push('/login');
       return;
     }
-    
+
     const user = JSON.parse(userData);
     if (user.role !== 'admin') {
       router.push('/detector');
       return;
     }
-    
+
     fetchData(token);
   }, [router, activeTab]);
 
   const fetchData = async (token) => {
     setLoading(true);
     setError('');
-    
+
     try {
       const headers = { Authorization: `Bearer ${token}` };
-      
+
       if (activeTab === 'stats') {
         const response = await axios.get(`${API_URL}/admin/stats`, { headers });
         setStats(response.data);
@@ -109,12 +109,7 @@ export default function AdminDashboard() {
               <p className="text-sm text-gray-600">System Management & Monitoring</p>
             </div>
             <div className="flex gap-3">
-              <button
-                onClick={handleLogout}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold"
-              >
-                Logout
-              </button>
+              {/* Logout handled by global header */}
             </div>
           </div>
         </div>
@@ -126,31 +121,28 @@ export default function AdminDashboard() {
           <div className="flex border-b">
             <button
               onClick={() => setActiveTab('stats')}
-              className={`px-6 py-3 font-semibold ${
-                activeTab === 'stats'
+              className={`px-6 py-3 font-semibold ${activeTab === 'stats'
                   ? 'border-b-2 border-blue-600 text-blue-600'
                   : 'text-gray-600 hover:text-gray-900'
-              }`}
+                }`}
             >
               📊 Statistics
             </button>
             <button
               onClick={() => setActiveTab('users')}
-              className={`px-6 py-3 font-semibold ${
-                activeTab === 'users'
+              className={`px-6 py-3 font-semibold ${activeTab === 'users'
                   ? 'border-b-2 border-blue-600 text-blue-600'
                   : 'text-gray-600 hover:text-gray-900'
-              }`}
+                }`}
             >
               👥 Users
             </button>
             <button
               onClick={() => setActiveTab('queries')}
-              className={`px-6 py-3 font-semibold ${
-                activeTab === 'queries'
+              className={`px-6 py-3 font-semibold ${activeTab === 'queries'
                   ? 'border-b-2 border-blue-600 text-blue-600'
                   : 'text-gray-600 hover:text-gray-900'
-              }`}
+                }`}
             >
               📝 Queries
             </button>
@@ -196,13 +188,19 @@ export default function AdminDashboard() {
                     {stats.recent_queries?.map((query, index) => (
                       <div key={index} className="border-b pb-3">
                         <div className="flex justify-between items-start mb-2">
-                          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                            query.prediction.label === 'fake'
-                              ? 'bg-red-100 text-red-700'
-                              : 'bg-green-100 text-green-700'
-                          }`}>
-                            {query.prediction.label.toUpperCase()}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${(query.prediction.combined_result?.verdict || query.prediction.label) === 'fake'
+                                ? 'bg-red-100 text-red-700'
+                                : 'bg-green-100 text-green-700'
+                              }`}>
+                              {(query.prediction.combined_result?.verdict || query.prediction.label).toUpperCase()}
+                            </span>
+                            {query.prediction.combined_result && (
+                              <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded">
+                                🎯 Voting
+                              </span>
+                            )}
+                          </div>
                           <span className="text-sm text-gray-500">
                             {new Date(query.timestamp).toLocaleString()}
                           </span>
@@ -246,11 +244,10 @@ export default function AdminDashboard() {
                           <select
                             value={user.role || 'user'}
                             onChange={(e) => handleUpdateUserRole(user._id, e.target.value)}
-                            className={`px-2 py-1 text-xs font-semibold rounded-full border-0 ${
-                              user.role === 'admin'
+                            className={`px-2 py-1 text-xs font-semibold rounded-full border-0 ${user.role === 'admin'
                                 ? 'bg-purple-100 text-purple-800'
                                 : 'bg-gray-100 text-gray-800'
-                            }`}
+                              }`}
                             disabled={user.username === 'admin'}
                           >
                             <option value="user">User</option>
@@ -270,9 +267,8 @@ export default function AdminDashboard() {
                               setShowDeleteModal(true);
                             }}
                             disabled={user.username === 'admin'}
-                            className={`text-red-600 hover:text-red-900 font-semibold ${
-                              user.username === 'admin' ? 'opacity-50 cursor-not-allowed' : ''
-                            }`}
+                            className={`text-red-600 hover:text-red-900 font-semibold ${user.username === 'admin' ? 'opacity-50 cursor-not-allowed' : ''
+                              }`}
                           >
                             Delete
                           </button>
@@ -290,7 +286,7 @@ export default function AdminDashboard() {
                 <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
                   <h3 className="text-lg font-bold text-gray-900 mb-4">Confirm Delete</h3>
                   <p className="text-gray-600 mb-6">
-                    Are you sure you want to delete user <strong>{userToDelete.username}</strong>? 
+                    Are you sure you want to delete user <strong>{userToDelete.username}</strong>?
                     This will also delete all their queries. This action cannot be undone.
                   </p>
                   <div className="flex gap-3 justify-end">
@@ -322,11 +318,10 @@ export default function AdminDashboard() {
                     <div key={query._id} className="p-6">
                       <div className="flex justify-between items-start mb-3">
                         <div className="flex items-center gap-3">
-                          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                            query.prediction.label === 'fake'
+                          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${query.prediction.label === 'fake'
                               ? 'bg-red-100 text-red-700'
                               : 'bg-green-100 text-green-700'
-                          }`}>
+                            }`}>
                             {query.prediction.label.toUpperCase()}
                           </span>
                           <span className="text-sm text-gray-500">
