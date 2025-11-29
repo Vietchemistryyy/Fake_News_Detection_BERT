@@ -34,6 +34,7 @@ class GroqVerifier:
         
         try:
             truncated_text = truncate_text(text, 500)
+            logger.info(f"Groq analyzing text (length={len(truncated_text)}): {truncated_text[:100]}...")
             
             # Choose prompt based on language
             if language == "vi":
@@ -45,13 +46,18 @@ HƯỚNG DẪN QUAN TRỌNG:
 3. Chỉ đánh dấu "fake" nếu bạn tìm thấy thông tin sai lệch rõ ràng hoặc tuyên bố bịa đặt
 4. Nếu nội dung có vẻ hợp lý nhưng không thể xác minh, hãy nghiêng về "real" với độ tin cậy thấp hơn
 
-Trả lời CHỈ bằng JSON hợp lệ (không markdown, không văn bản thêm) và PHẢI bằng tiếng Việt:
+Trả lời CHỈ bằng JSON hợp lệ (không markdown, không văn bản thêm). Phần reasoning và concerns PHẢI bằng tiếng Việt:
 {
-    "verdict": "real" hoặc "fake",
-    "confidence": 0.0 đến 1.0,
-    "reasoning": "Giải thích ngắn gọn bằng tiếng Việt",
-    "concerns": ["mối quan ngại 1", "mối quan ngại 2"]
-}"""
+    "verdict": "real",
+    "confidence": 0.75,
+    "reasoning": "Giải thích ngắn gọn bằng tiếng Việt tại sao đưa ra kết luận này",
+    "concerns": ["mối quan ngại 1 nếu có", "mối quan ngại 2 nếu có"]
+}
+
+Lưu ý: 
+- verdict chỉ được là "real" hoặc "fake"
+- confidence là số thập phân từ 0.0 đến 1.0 (ví dụ: 0.75, 0.85)
+- reasoning phải giải thích rõ ràng bằng tiếng Việt"""
             else:  # English
                 system_prompt = """You are a neutral fact-checking assistant. Analyze the given news article objectively.
 
@@ -63,11 +69,16 @@ IMPORTANT GUIDELINES:
 
 Respond ONLY with valid JSON (no markdown, no extra text):
 {
-    "verdict": "real" or "fake",
-    "confidence": 0.0 to 1.0,
-    "reasoning": "Brief explanation in English",
-    "concerns": ["concern1", "concern2"]
-}"""
+    "verdict": "real",
+    "confidence": 0.75,
+    "reasoning": "Brief explanation in English why you reached this conclusion",
+    "concerns": ["concern1 if any", "concern2 if any"]
+}
+
+Note:
+- verdict must be either "real" or "fake"
+- confidence is a decimal number from 0.0 to 1.0 (e.g., 0.75, 0.85)
+- reasoning must clearly explain your decision"""
 
             response = self.client.chat.completions.create(
                 model=self.model,
@@ -98,10 +109,6 @@ Respond ONLY with valid JSON (no markdown, no extra text):
                 result["verdict"] = "real" if result.get("confidence", 0.5) < 0.5 else "fake"
             
             result["is_available"] = True
-            
-            # Adjust confidence if too certain without evidence
-            if result["confidence"] > 0.85 and len(result.get("concerns", [])) < 2:
-                result["confidence"] = min(0.75, result["confidence"])
             
             return result
             

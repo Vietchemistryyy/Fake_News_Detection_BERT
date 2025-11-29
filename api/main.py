@@ -247,15 +247,23 @@ async def predict(
             logger.info(f"User authenticated: {current_user.get('username')}")
             if db.connected:
                 try:
+                    # Use voting result if available, otherwise use BERT result
+                    final_label = combined_result["verdict"] if combined_result else bert_result["label"]
+                    final_confidence = combined_result["confidence"] if combined_result else bert_result["confidence"]
+                    
                     query_id = db.save_query(
                         user_id=current_user["_id"],
                         text=text,
                         language=request.language,
                         prediction={
-                            "label": bert_result["label"],
-                            "confidence": bert_result["confidence"],
+                            "label": final_label,
+                            "confidence": final_confidence,
                             "probabilities": bert_result["probabilities"],
-                            "openai_result": ai_result,
+                            "bert_result": {
+                                "label": bert_result["label"],
+                                "confidence": bert_result["confidence"]
+                            },
+                            "groq_result": groq_result,
                             "combined_result": combined_result,
                             "mc_dropout": request.mc_dropout
                         }
