@@ -7,6 +7,8 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export default function Detector() {
   const [text, setText] = useState('');
+  const [url, setUrl] = useState('');
+  const [inputMode, setInputMode] = useState('text'); // 'text' or 'url'
   const [language, setLanguage] = useState('en');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -78,6 +80,63 @@ export default function Detector() {
     }
   };
 
+  const handleUrlSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setResult(null);
+
+    if (!url.trim()) {
+      setError('Please enter a URL');
+      return;
+    }
+
+    // Basic URL validation
+    try {
+      new URL(url);
+    } catch {
+      setError('Please enter a valid URL');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `${API_URL}/predict-url`,
+        null,
+        {
+          params: {
+            url: url.trim(),
+            verify_with_ai: useAI,
+            mc_dropout: mcDropout,
+          },
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      console.log('URL API Response:', response.data);
+      setResult(response.data);
+    } catch (err) {
+      console.error('URL API Error:', err);
+      if (err.response?.status === 401) {
+        localStorage.removeItem('token');
+        router.push('/login');
+      } else if (err.response?.status === 422) {
+        // URL cannot be accessed - suggest manual paste
+        const message = err.response?.data?.detail || 'Cannot access this URL';
+        setError(`${message}\n\nPlease try switching to "Paste Text" mode and copy the article content manually.`);
+      } else {
+        const message = err.response?.data?.detail || err.message || 'Failed to analyze URL';
+        setError(message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (authLoading || !user) {
     return <div className="min-h-screen flex items-center justify-center">
       <div className="text-xl">Loading...</div>
@@ -125,8 +184,84 @@ export default function Detector() {
                   </p>
                 </div>
 
-                {/* Text Input */}
+                {/* Input Mode Tabs */}
                 <div className="mb-6">
+                  <div className="flex border-b border-gray-200">
+                    <button
+                      type="button"
+                      onClick={() => { setInputMode('text'); setError(''); }}
+                      className={`px-6 py-3 font-semibold transition-colors ${inputMode === 'text'
+                        ? 'border-b-2 border-blue-600 text-blue-600'
+                        : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                    >
+                      📝 Paste Text
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setInputMode('url'); setError(''); }}
+                      className={`px-6 py-3 font-semibold transition-colors ${inputMode === 'url'
+                        ? 'border-b-2 border-blue-600 text-blue-600'
+                        : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                    >
+                      🔗 Enter URL
+                    </button>
+                  </div>
+                </div>
+
+                {/* Text Input Mode */}
+                {inputMode === 'text' && (
+                  <>
+                    {/* Text Input */}
+                    <div className="mb-6">
+                      <label className="block text-gray-700 font-bold mb-2">
+                        {language === 'en' ? 'News Text' : 'Nội dung tin tức'}
+                      </label>
+                      <textarea
+                        value={text}
+                        onChange={(e) => setText(e.target.value)}
+                        placeholder={language === 'en'
+                          ? 'Paste your news article here...'
+                          : 'Dán nội dung tin tức vào đây...'}
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 resize-none"
+                        rows="6"
+                      />
+                      <p className="text-sm text-gray-500 mt-2">
+                        {text.length}/5000 characters
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {/* URL Input Mode */}
+                {inputMode === 'url' && (
+                  <>
+                    <div className="mb-6">
+                      <label className="block text-gray-700 font-bold mb-2">
+                        {language === 'en' ? 'Article URL' : 'URL bài viết'}
+                      </label>
+                      <input
+                        type="url"
+                        value={url}
+                        onChange={(e) => setUrl(e.target.value)}
+                        placeholder={language === 'en'
+                          ? 'https://example.com/news-article'
+                          : 'https://vnexpress.net/bai-viet-tin-tuc'}
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                      />
+                      <p className="text-sm text-gray-500 mt-2">
+                        {language === 'en'
+                          ? 'Enter the full URL of the news article'
+                          : 'Nhập URL đầy đủ của bài viết tin tức'}
+                      </p>
+
+                    </div>
+                  </>
+                )}
+
+                {/* Text Input */}
+                <div className="mb-6" style={{ display: 'none' }}>
                   <label className="block text-gray-700 font-bold mb-2">
                     {language === 'en' ? 'News Text' : 'Nội dung tin tức'}
                   </label>
@@ -179,16 +314,21 @@ export default function Detector() {
                 {/* Submit Button */}
                 <button
                   type="submit"
+                  onClick={inputMode === 'url' ? handleUrlSubmit : handleSubmit}
                   disabled={loading}
                   className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold py-3 px-6 rounded-lg hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
                   {loading ? (
                     <span className="flex items-center justify-center gap-2">
                       <div className="loading-spinner" />
-                      {language === 'en' ? 'Analyzing...' : 'Đang phân tích...'}
+                      {inputMode === 'url'
+                        ? (language === 'en' ? 'Scraping & Analyzing...' : 'Đang tải & phân tích...')
+                        : (language === 'en' ? 'Analyzing...' : 'Đang phân tích...')}
                     </span>
                   ) : (
-                    language === 'en' ? 'Analyze News' : 'Phân tích tin tức'
+                    inputMode === 'url'
+                      ? (language === 'en' ? '🔗 Analyze URL' : '🔗 Phân tích URL')
+                      : (language === 'en' ? '📝 Analyze Text' : '📝 Phân tích văn bản')
                   )}
                 </button>
               </form>
@@ -211,8 +351,8 @@ export default function Detector() {
                       </p>
                       <p className="text-2xl font-bold uppercase">
                         <span className={`px-3 py-1 rounded-full ${result.label === 'fake'
-                            ? 'bg-red-100 text-red-700'
-                            : 'bg-green-100 text-green-700'
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-green-100 text-green-700'
                           }`}>
                           {result.label === 'fake'
                             ? (language === 'en' ? 'FAKE' : 'GIẢ')
@@ -284,8 +424,8 @@ export default function Detector() {
                       <div className="flex items-center justify-between mb-6">
                         <div>
                           <span className={`px-6 py-3 rounded-full text-xl font-bold ${result.groq_result.verdict === 'fake'
-                              ? 'bg-red-100 text-red-700'
-                              : 'bg-green-100 text-green-700'
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-green-100 text-green-700'
                             }`}>
                             {result.groq_result.verdict === 'fake'
                               ? (language === 'en' ? 'FAKE' : 'GIẢ')
@@ -329,8 +469,8 @@ export default function Detector() {
                         </p>
                         <p className="text-3xl font-bold uppercase">
                           <span className={`px-6 py-3 rounded-full ${result.combined_result.verdict === 'fake'
-                              ? 'bg-red-100 text-red-700'
-                              : 'bg-green-100 text-green-700'
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-green-100 text-green-700'
                             }`}>
                             {result.combined_result.verdict === 'fake'
                               ? (language === 'en' ? 'FAKE' : 'GIẢ')
@@ -415,6 +555,7 @@ export default function Detector() {
                 <button
                   onClick={() => {
                     setText('');
+                    setUrl('');
                     setResult(null);
                     setError('');
                   }}

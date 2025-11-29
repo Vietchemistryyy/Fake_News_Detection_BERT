@@ -27,16 +27,20 @@ export default function Header() {
                                         <span className="ml-2 px-3 py-1 bg-yellow-400 text-yellow-900 text-sm rounded">Admin</span>
                                     )}
                                 </span>
-                                <Link href="/detector">
-                                    <button className="bg-blue-600 text-white font-semibold py-3 px-8 rounded-lg hover:bg-blue-700 transition-all text-lg">
-                                        Detector
-                                    </button>
-                                </Link>
-                                <Link href="/history">
-                                    <button className="bg-green-600 text-white font-semibold py-3 px-8 rounded-lg hover:bg-green-700 transition-all text-lg">
-                                        History
-                                    </button>
-                                </Link>
+                                {user.role !== 'admin' && (
+                                    <>
+                                        <Link href="/detector">
+                                            <button className="bg-blue-600 text-white font-semibold py-3 px-8 rounded-lg hover:bg-blue-700 transition-all text-lg">
+                                                Detector
+                                            </button>
+                                        </Link>
+                                        <Link href="/history">
+                                            <button className="bg-green-600 text-white font-semibold py-3 px-8 rounded-lg hover:bg-green-700 transition-all text-lg">
+                                                History
+                                            </button>
+                                        </Link>
+                                    </>
+                                )}
                                 {user.role === 'admin' && (
                                     <Link href="/admin">
                                         <button className="bg-purple-600 text-white font-semibold py-3 px-8 rounded-lg hover:bg-purple-700 transition-all text-lg">

@@ -6,8 +6,10 @@ export default function Layout({ children, user, onLogout }) {
   const currentPath = router.pathname;
 
   const navigation = [
-    { name: 'Detector', href: '/detector', icon: '🔍' },
-    { name: 'History', href: '/history', icon: '📊' },
+    ...(user?.role !== 'admin' ? [
+      { name: 'Detector', href: '/detector', icon: '🔍' },
+      { name: 'History', href: '/history', icon: '📊' },
+    ] : []),
     ...(user?.role === 'admin' ? [{ name: 'Admin', href: '/admin', icon: '⚙️' }] : []),
   ];
 
@@ -24,7 +26,7 @@ export default function Layout({ children, user, onLogout }) {
                 <p className="text-xs text-blue-100">AI-Powered News Verification</p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-6">
               <div className="text-sm">
                 <span className="text-blue-100">Welcome, </span>
@@ -53,11 +55,10 @@ export default function Layout({ children, user, onLogout }) {
               <a
                 key={item.name}
                 href={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  currentPath === item.href
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${currentPath === item.href
                     ? 'bg-blue-600 text-white shadow-md'
                     : 'text-gray-700 hover:bg-gray-100'
-                }`}
+                  }`}
               >
                 <span className="text-2xl">{item.icon}</span>
                 <span className="font-medium">{item.name}</span>
