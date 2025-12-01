@@ -2,7 +2,7 @@
 
 A fake news detection system that actually works. Built with BERT models for both English and Vietnamese news articles.
 
-[Watch the demo](https://youtu.be/9RmSw6CzblE) if you want to see it in action.
+[Watch the demo](https://youtu.be/D1b-JIjqIzw) if you want to see it in action.
 
 ## What is this?
 
